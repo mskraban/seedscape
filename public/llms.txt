@@ -1,6 +1,6 @@
 # Seedscape
 
-> Seedscape turns any text (a "seed") into a deterministic, optionally animated wallpaper. 35 generative styles, a free image API (PNG, JPEG, WebP, animated WebP/GIF), a fullscreen live-wallpaper page and a browser generator. Open source (MIT), no accounts, no tracking.
+> Seedscape turns any text (a "seed") into a deterministic, optionally animated wallpaper. 35 generative styles, a free image API (PNG, JPEG, WebP, animated WebP/GIF), a fullscreen live-wallpaper page and a browser generator. Open source (MIT), no accounts, no cookies.
 
 - Same seed and options always produce the same image.
 - Image API: GET https://seedscape-azure.vercel.app/api/wallpaper?seed=hello&style=aurora&size=1200x400 (add animate=1 for a looping animation). No API key.

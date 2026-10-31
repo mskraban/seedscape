@@ -7,7 +7,7 @@
 ### Type a seed. Get a wallpaper. Same seed, same art — always.
 
 A zero-install **web app** and a tiny **image API** that paint deterministic, shareable wallpapers, <b>and make every one of them move</b>.<br>
-No AI. No accounts. No tracking. Just a seed and some math.
+No AI. No accounts. No cookies. Just a seed and some math.
 
 [![CI](https://github.com/mskraban/seedscape/actions/workflows/ci.yml/badge.svg)](https://github.com/mskraban/seedscape/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-7c5cff.svg)](LICENSE)

@@ -33,7 +33,7 @@ for (const [file, route] of Object.entries(pages)) {
     for (const m of html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) JSON.parse(m[1]);
     for (const m of html.matchAll(/(?:href|src)="([^"#?]+)[^"]*"/g)) {
       const u = m[1];
-      if (/^(https?:|mailto:|data:|\/\/)/.test(u) || /\$\{/.test(u) || /^\/?(api|w|random)(\/|$)/.test(u)) continue;
+      if (/^(https?:|mailto:|data:|\/\/)/.test(u) || /\$\{/.test(u) || /^\/?(api|w|random|_vercel)(\/|$)/.test(u)) continue;
       const clean = u.replace(/^\//, '');
       const ok = clean === '' || fs.existsSync(path.join(PUB, clean)) || fs.existsSync(path.join(PUB, clean + '.html')) || ['sitemap.xml'].includes(clean);
       assert.ok(ok, `${file} links to a missing file: ${u}`);
