@@ -58,7 +58,7 @@ test('API renders png / jpeg / webp and enforces limits', async () => {
 test('describe() lists styles, palettes and limits', () => {
   const d = describe();
   assert.equal(d.styles.length, Object.keys(Seedscape.STYLES).length);
-  assert.ok(d.styles.length >= 19);
+  assert.ok(d.styles.length >= 35);
   assert.ok(d.palettes.some((p) => p.id === 'game-boy'));
   assert.ok(d.limits.maxDim > 0);
 });
@@ -83,4 +83,17 @@ test('existing seeds keep rendering the same: first six styles are frozen', () =
   ).digest('hex').slice(0, 10);
   const got = Object.fromEntries(['horizon', 'aurora', 'mosaic', 'waves', 'geometric', 'automata'].map((s) => [s, sig(s)]));
   assert.deepEqual(got, require('./fixtures/signatures.json'));
+});
+
+test('blur: off by default, deterministic, validated, and actually softens', () => {
+  const crypto = require('node:crypto');
+  const sig = (o) => crypto.createHash('sha1').update(
+    Seedscape.render(Seedscape.normalize({ seed: 'blur', style: 'geometric', w: 320, h: 180, ...o }), createCanvas).toBuffer('image/png')
+  ).digest('hex');
+  assert.equal(sig({}), sig({ blur: '0' }));
+  assert.equal(sig({ blur: '12' }), sig({ blur: '12' }));
+  assert.notEqual(sig({}), sig({ blur: '12' }));
+  assert.notEqual(sig({ blur: '5' }), sig({ blur: '25' }));
+  assert.throws(() => Seedscape.normalize({ blur: '31' }), /"blur"/);
+  assert.throws(() => Seedscape.normalize({ blur: '-1' }), /"blur"/);
 });

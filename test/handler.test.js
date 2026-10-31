@@ -54,5 +54,5 @@ test('GET /api/random and /api/styles return JSON', () => {
   res = mockRes(); random({ query: { redirect: '1' }, headers: {} }, res);
   assert.equal(res.statusCode, 302);
   res = mockRes(); styles({ query: {} }, res);
-  assert.ok(JSON.parse(res.body).styles.length >= 19);
+  assert.ok(JSON.parse(res.body).styles.length >= 35);
 });

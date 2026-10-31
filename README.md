@@ -11,12 +11,12 @@ No AI. No accounts. No tracking. Just a seed and some math.
 
 [![CI](https://github.com/mskraban/seedscape/actions/workflows/ci.yml/badge.svg)](https://github.com/mskraban/seedscape/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-7c5cff.svg)](LICENSE)
-[![Deploy: Vercel](https://img.shields.io/badge/deployed%20on-Vercel-000?logo=vercel)](https://seedscape.vercel.app)
+[![Deploy: Vercel](https://img.shields.io/badge/deployed%20on-Vercel-000?logo=vercel)](https://seedscape-azure.vercel.app)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-43853d?logo=node.js&logoColor=white)](package.json)
 [![Dependencies](https://img.shields.io/badge/runtime%20deps-1-ff5ca8)](package.json)
 [![Stars](https://img.shields.io/github/stars/mskraban/seedscape?style=flat&color=ffd166)](https://github.com/mskraban/seedscape/stargazers)
 
-**[🎨 Open the app](https://seedscape.vercel.app)** &nbsp;·&nbsp;
+**[🎨 Open the app](https://seedscape-azure.vercel.app)** &nbsp;·&nbsp;
 **[⚡ Try the API](#-api)** &nbsp;·&nbsp;
 **[🧩 Add a style](#-add-your-own-style)** &nbsp;·&nbsp;
 **[🚀 Deploy your own](#-deploy-your-own)**
@@ -26,7 +26,7 @@ No AI. No accounts. No tracking. Just a seed and some math.
 <br>
 
 <p align="center">
-  <img src="docs/gallery.jpg" alt="Nineteen Seedscape styles" width="92%">
+  <img src="docs/gallery.jpg" alt="Thirty-five Seedscape styles" width="92%">
 </p>
 
 ---
@@ -36,9 +36,9 @@ No AI. No accounts. No tracking. Just a seed and some math.
 |  |  |
 |---|---|
 | 🌱 **Reproducible** | The seed fully determines the image. `golden-fox-212` is the same wallpaper on every machine, forever. |
-| 🎨 **19 styles · 12 palettes** | Pixel landscapes, glowing skies, isometric cubes, contour maps, nebulae, stained glass, city skylines, spirographs, flow fields, ringed planets and more, plus a palette generated from your seed. |
+| 🎨 **35 styles · 12 palettes** | Pixel landscapes, synthwave suns, mazes, circuit boards, kaleidoscopes, island maps, glitch art, ringed planets and 27 more, plus a palette generated from your seed. |
 | 📐 **Any size** | Desktop, 4K, ultrawide, MacBook, iPhone, Android, square, or custom. |
-| 🕹️ **Pixel-size dial** | From crunchy retro pixels to smooth native resolution; scales with output size so the look stays consistent. |
+| 🕹️ **Pixel-size dial & blur** | From crunchy retro pixels to smooth native resolution, plus a Gaussian blur slider for dreamy, out-of-focus wallpapers. |
 | 🔗 **Shareable** | Every setting lives in the URL. Send a link, get the exact same art. |
 | ⚡ **Image API** | `<img src="…/api/wallpaper?seed=hello">`: a PNG/JPEG/WebP from a URL, cached forever. |
 | 🔒 **Private by design** | The web app runs 100 % in your browser and works offline. Nothing is uploaded. |
@@ -73,7 +73,7 @@ Works offline. No build, no install.
 
 ```bash
 curl -o wall.png \
- "https://seedscape.vercel.app/api/wallpaper?seed=hello&style=aurora&palette=neon"
+ "https://seedscape-azure.vercel.app/api/wallpaper?seed=hello&style=aurora&palette=neon"
 ```
 
 Or drop the URL straight into an `<img>` tag.
@@ -86,7 +86,7 @@ Or drop the URL straight into an `<img>` tag.
 
 ## ⚡ API
 
-Base URL: **`https://seedscape.vercel.app`**
+Base URL: **`https://seedscape-azure.vercel.app`**
 
 | Method | Endpoint | Description |
 |:------:|----------|-------------|
@@ -107,11 +107,12 @@ CORS is open (`Access-Control-Allow-Origin: *`), so you can call it from any web
 | Param | Default | Description |
 |-------|---------|-------------|
 | `seed` | *random* | Any text, up to 200 chars. **Omit it for a random image** (not cached). |
-| `style` | `horizon` | One of the 19 [styles](#-styles) below, e.g. `horizon`, `aurora`, `cubes`, `topo`, `planet`. |
+| `style` | `horizon` | One of the 35 [styles](#-styles) below, e.g. `horizon`, `synthwave`, `maze`, `planet`. |
 | `palette` | `auto` | `auto` (derived from the seed) or a palette id, see [`/api/styles`](#get-apistyles). |
 | `size` | `1920x1080` | Shorthand `WxH`. Or use `w` and `h` separately. |
 | `w`, `h` | `1920`, `1080` | Width / height in px. Min 64, max 4096, and at most 8.5 megapixels in total. |
 | `px` | `4` | Pixel size `1`–`16`. `1` = smooth, native resolution. |
+| `blur` | `0` | Gaussian blur `0`–`30` (scales with image size). Grain and vignette are applied *after* the blur so they stay crisp. |
 | `grain` | `1` | Film grain: `1` / `0`. |
 | `vignette` | `1` | Edge darkening: `1` / `0`. |
 | `invert` | `0` | Swap light and dark in the palette. |
@@ -150,8 +151,8 @@ Returns a random seed, style and palette plus URLs that render it.
   "seed": "gentle-reef-757",
   "style": "horizon",
   "palette": "pastel",
-  "url": "https://seedscape.vercel.app/api/wallpaper?seed=gentle-reef-757&style=horizon&palette=pastel",
-  "app": "https://seedscape.vercel.app/#seed=gentle-reef-757&s=horizon&p=Pastel"
+  "url": "https://seedscape-azure.vercel.app/api/wallpaper?seed=gentle-reef-757&style=horizon&palette=pastel",
+  "app": "https://seedscape-azure.vercel.app/#seed=gentle-reef-757&s=horizon&p=Pastel"
 }
 ```
 
@@ -167,11 +168,11 @@ Machine-readable catalogue: styles, palettes (with their hex colours), sizes, fo
 <summary><b>HTML / Markdown</b></summary>
 
 ```html
-<img src="https://seedscape.vercel.app/api/wallpaper?seed=my-blog&style=waves&size=1200x400" alt="Header">
+<img src="https://seedscape-azure.vercel.app/api/wallpaper?seed=my-blog&style=waves&size=1200x400" alt="Header">
 ```
 
 ```markdown
-![Banner](https://seedscape.vercel.app/api/wallpaper?seed=my-project&style=geometric&size=1280x320&grain=0)
+![Banner](https://seedscape-azure.vercel.app/api/wallpaper?seed=my-project&style=geometric&size=1280x320&grain=0)
 ```
 </details>
 
@@ -180,7 +181,7 @@ Machine-readable catalogue: styles, palettes (with their hex colours), sizes, fo
 
 ```css
 body {
-  background: #0d0221 url("https://seedscape.vercel.app/api/wallpaper?seed=my-site&style=aurora&palette=neon&size=1920x1080&format=webp") center / cover fixed;
+  background: #0d0221 url("https://seedscape-azure.vercel.app/api/wallpaper?seed=my-site&style=aurora&palette=neon&size=1920x1080&format=webp") center / cover fixed;
 }
 ```
 </details>
@@ -192,7 +193,7 @@ Use the date as the seed: the image changes daily but is cached all day.
 
 ```js
 const today = new Date().toISOString().slice(0, 10);   // "2026-10-31"
-img.src = `https://seedscape.vercel.app/api/wallpaper?seed=${today}&style=horizon`;
+img.src = `https://seedscape-azure.vercel.app/api/wallpaper?seed=${today}&style=horizon`;
 ```
 </details>
 
@@ -200,18 +201,18 @@ img.src = `https://seedscape.vercel.app/api/wallpaper?seed=${today}&style=horizo
 <summary><b>curl · JavaScript · Python</b></summary>
 
 ```bash
-curl -s "https://seedscape.vercel.app/api/random"                       # get a random seed as JSON
-curl -sJO "https://seedscape.vercel.app/api/wallpaper?seed=hi&download=1"   # save with a proper filename
+curl -s "https://seedscape-azure.vercel.app/api/random"                       # get a random seed as JSON
+curl -sJO "https://seedscape-azure.vercel.app/api/wallpaper?seed=hi&download=1"   # save with a proper filename
 ```
 
 ```js
-const res = await fetch("https://seedscape.vercel.app/api/wallpaper?seed=hello&format=webp");
+const res = await fetch("https://seedscape-azure.vercel.app/api/wallpaper?seed=hello&format=webp");
 const blob = await res.blob();
 ```
 
 ```python
 import requests
-r = requests.get("https://seedscape.vercel.app/api/wallpaper",
+r = requests.get("https://seedscape-azure.vercel.app/api/wallpaper",
                  params={"seed": "hello", "style": "mosaic", "palette": "game-boy", "size": "800x600"})
 open("hello.png", "wb").write(r.content)
 ```
@@ -233,7 +234,7 @@ open("hello.png", "wb").write(r.content)
 
 ## 🎨 Styles
 
-19 styles, all deterministic, all available in the app (keys `1`–`9`, `[` / `]`) and in the API (`style=<id>`).
+35 styles, all deterministic, all available in the app (keys `1`–`9`, `[` / `]` to cycle) and in the API (`style=<id>`).
 
 | `id` | Look |
 |------|------|
@@ -256,6 +257,22 @@ open("hello.png", "wb").write(r.content)
 | 🌲 `forest` | Rows of pines receding into fog. |
 | 🐝 `hex` | A honeycomb mosaic coloured by a noise field. |
 | 🪐 `planet` | A shaded world with atmosphere, optional ring and starry sky. |
+| 🌀 `maze` | A spanning-tree maze, coloured by distance from the start. |
+| 🔌 `circuit` | 45° circuit-board traces, pads and chips. |
+| ❄️ `kaleido` | N-fold mirrored translucent shapes, like a kaleidoscope. |
+| 🏝️ `islands` | A top-down archipelago map with hill-shading and shoreline foam. |
+| 📈 `ridgelines` | Stacked, noisy line plots in the style of a famous pulsar album cover. |
+| 🫧 `bokeh` | Soft, out-of-focus light discs. |
+| 📺 `glitch` | Broken signal: sliced rows, RGB-split and scanlines. |
+| 🎉 `memphis` | 80s confetti of squiggles, triangles, crosses and dots. |
+| 🌆 `synthwave` | A striped neon sun over a perspective grid and dark hills. |
+| 🧶 `tartan` | Woven plaid from overlapping translucent stripes. |
+| 🕸️ `network` | Glowing nodes linked by their nearest neighbours. |
+| 🌫️ `mesh` | A smooth gradient mesh, the modern desktop-wallpaper look. |
+| 〰️ `moire` | Overlapping ring systems whose interference makes shimmering patterns. |
+| 🫠 `metaballs` | Merging blobs contoured into colour bands. |
+| 🧬 `life` | Conway's Game of Life with age colouring and fading trails. |
+| 🎞️ `dither` | Ordered Bayer dithering of a smooth field into 2–4 colours. Try `px=8`. |
 
 <details>
 <summary><b>🎨 Palettes</b> (click to expand)</summary>
@@ -321,7 +338,7 @@ seedscape/
 git clone https://github.com/mskraban/seedscape.git
 cd seedscape
 npm install
-npm test            # 15 tests: determinism, frozen seeds, validation, API handlers
+npm test            # 16 tests: determinism, frozen seeds, blur, validation, API handlers
 npm run dev         # → http://localhost:3000  (app + API)
 ```
 
@@ -353,11 +370,11 @@ Palettes are just arrays of hex colours in the `PALETTES` object.
 
 ## 🗺️ Roadmap
 
-- [x] Deterministic engine with 19 styles
+- [x] Deterministic engine with 35 styles and Gaussian blur
 - [x] Web app with shareable links and PNG export
 - [x] Image API (PNG / JPEG / WebP) with immutable caching
 - [ ] Animated export (GIF / WebM)
-- [ ] Even more styles: mazes, islands, circuit boards, kaleidoscopes, pixel portraits
+- [ ] Even more styles: pixel portraits, isometric cities, mandalas, topographic 3D, weather
 - [ ] Dithering and palette-quantisation options
 - [ ] Batch export of many seeds as a ZIP
 - [ ] Palette from an uploaded image

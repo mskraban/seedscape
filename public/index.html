@@ -57,6 +57,9 @@
   }
   button.primary:hover { filter: brightness(1.08); }
   .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  #styles { grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  #styles button { padding: 7px 2px; font-size: 11.5px; }
+  #styles button small { display: none; }
   .grid3 button { padding: 7px 4px; font-size: 12.5px; text-align: center; }
   .grid3 button small { display: block; color: var(--muted); font-size: 10.5px; }
   .grid3 button.on { border-color: var(--accent); background: #211d3d; }
@@ -153,6 +156,11 @@
       <input id="px" type="range" min="1" max="16" step="1" value="4">
     </section>
 
+    <section>
+      <label for="blur">Blur <output id="blurv"></output></label>
+      <input id="blur" type="range" min="0" max="30" step="1" value="0">
+    </section>
+
     <section class="checks">
       <label class="check"><input type="checkbox" id="grain"> Film grain</label>
       <label class="check"><input type="checkbox" id="vig"> Vignette</label>
@@ -191,13 +199,13 @@ const makeCanvas = (w, h) => { const c = document.createElement('canvas'); c.wid
 
 /* ───────────────────────── State ───────────────────────── */
 function defaultState() {
-  return { seed: randomSeed(), style: 'horizon', pal: 'auto', res: '1920x1080', cw: 1920, ch: 1080, px: 4, grain: true, vig: true, invert: false };
+  return { seed: randomSeed(), style: 'horizon', pal: 'auto', res: '1920x1080', cw: 1920, ch: 1080, px: 4, blur: 0, grain: true, vig: true, invert: false };
 }
 function stateToParams(st) {
   const p = new URLSearchParams();
   p.set('seed', st.seed); p.set('s', st.style); p.set('p', st.pal); p.set('r', st.res);
   if (st.res === 'custom') { p.set('cw', st.cw); p.set('ch', st.ch); }
-  p.set('px', st.px); p.set('g', st.grain ? 1 : 0); p.set('v', st.vig ? 1 : 0); p.set('i', st.invert ? 1 : 0);
+  p.set('px', st.px); if (st.blur) p.set('b', st.blur); p.set('g', st.grain ? 1 : 0); p.set('v', st.vig ? 1 : 0); p.set('i', st.invert ? 1 : 0);
   return p;
 }
 function stateFromParams(p) {
@@ -210,6 +218,7 @@ function stateFromParams(p) {
   const num = (k, lo, hi, def) => { const v = parseInt(p.get(k), 10); return Number.isFinite(v) ? clamp(v, lo, hi) : def; };
   st.cw = num('cw', 64, 7680, st.cw); st.ch = num('ch', 64, 7680, st.ch);
   st.px = num('px', 1, 16, st.px);
+  st.blur = num('b', 0, 30, 0);
   if (p.has('g')) st.grain = p.get('g') === '1';
   if (p.has('v')) st.vig = p.get('v') === '1';
   if (p.has('i')) st.invert = p.get('i') === '1';
@@ -227,7 +236,7 @@ function buildControls() {
     const b = document.createElement('button');
     b.dataset.style = k;
     b.innerHTML = `${STYLES[k].name}<small>${STYLES[k].sub}</small>`;
-    b.title = i < 9 ? `${STYLES[k].name} (${i + 1})` : STYLES[k].name;
+    b.title = `${STYLES[k].name} — ${STYLES[k].sub}` + (i < 9 ? ` (${i + 1})` : '');
     b.addEventListener('click', () => { state.style = k; sync(); render(); remember(); });
     $('styles').appendChild(b);
   });
@@ -245,6 +254,8 @@ function sync() {
   $('cw').value = state.cw; $('ch').value = state.ch;
   $('px').value = state.px;
   $('pxv').textContent = state.px <= 1 ? 'smooth (native)' : `${state.px}×`;
+  $('blur').value = state.blur;
+  $('blurv').textContent = state.blur ? `${state.blur}` : 'off';
   $('grain').checked = state.grain; $('vig').checked = state.vig;
   document.querySelectorAll('#styles button').forEach((b) => b.classList.toggle('on', b.dataset.style === state.style));
 }
@@ -355,6 +366,7 @@ function bind() {
   };
   $('cw').addEventListener('input', dim); $('ch').addEventListener('input', dim);
   $('px').addEventListener('input', (e) => { state.px = +e.target.value; sync(); scheduleRender(); });
+  $('blur').addEventListener('input', (e) => { state.blur = +e.target.value; sync(); scheduleRender(); });
   $('grain').addEventListener('change', (e) => { state.grain = e.target.checked; render(); });
   $('vig').addEventListener('change', (e) => { state.vig = e.target.checked; render(); });
   $('dl').addEventListener('click', download);
