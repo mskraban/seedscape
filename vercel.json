@@ -3,18 +3,68 @@
   "cleanUrls": true,
   "outputDirectory": "public",
   "functions": {
-    "api/*.js": { "maxDuration": 15, "memory": 1024 }
+    "api/*.js": {
+      "maxDuration": 15,
+      "memory": 1024
+    }
   },
   "rewrites": [
-    { "source": "/w/:seed", "destination": "/api/wallpaper?seed=:seed" },
-    { "source": "/random", "destination": "/api/wallpaper" }
+    {
+      "source": "/w/:seed",
+      "destination": "/api/wallpaper?seed=:seed"
+    },
+    {
+      "source": "/random",
+      "destination": "/api/wallpaper"
+    }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
+      ]
+    },
+    {
+      "source": "/fonts/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(favicon.svg|favicon-32.png|apple-touch-icon.png|icon-192.png|icon-512.png|og.png)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/(fonts.css|site.css|engine.js)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, stale-while-revalidate=86400"
+        }
       ]
     }
   ]

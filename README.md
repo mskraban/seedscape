@@ -16,9 +16,10 @@ No AI. No accounts. No tracking. Just a seed and some math.
 [![Dependencies](https://img.shields.io/badge/runtime%20deps-1-ff5ca8)](package.json)
 [![Stars](https://img.shields.io/github/stars/mskraban/seedscape?style=flat&color=ffd166)](https://github.com/mskraban/seedscape/stargazers)
 
-**[🎨 Open the app](https://seedscape-azure.vercel.app)** &nbsp;·&nbsp;
+**[🏠 Website](https://seedscape-azure.vercel.app)** &nbsp;·&nbsp;
+**[🎨 Generator](https://seedscape-azure.vercel.app/app)** &nbsp;·&nbsp;
 **[🌌 Live wallpaper](https://seedscape-azure.vercel.app/live)** &nbsp;·&nbsp;
-**[⚡ Try the API](#-api)** &nbsp;·&nbsp;
+**[⚡ API docs](https://seedscape-azure.vercel.app/docs)** &nbsp;·&nbsp;
 **[🧩 Add a style](#-add-your-own-style)** &nbsp;·&nbsp;
 **[🚀 Deploy your own](#-deploy-your-own)**
 
@@ -54,7 +55,7 @@ No AI. No accounts. No tracking. Just a seed and some math.
 | 🪶 **Tiny** | One drawing engine shared by browser and server, 1 runtime dependency (`@napi-rs/canvas`, API only). |
 
 <p align="center">
-  <img src="docs/app.jpg" alt="The Seedscape web app" width="92%">
+  <img src="docs/app.jpg" alt="The Seedscape generator: categories, animation, blur and the Share & API dock" width="92%">
 </p>
 
 ---
@@ -70,7 +71,7 @@ No AI. No accounts. No tracking. Just a seed and some math.
 ```bash
 git clone https://github.com/mskraban/seedscape.git
 cd seedscape/public
-open index.html      # or just double-click it
+open app.html        # or just double-click it
 ```
 
 Works offline. No build, no install.
@@ -393,16 +394,23 @@ flowchart LR
 ```
 seedscape/
 ├── public/
-│   ├── index.html        # the web app (static)
-│   ├── live.html         # fullscreen live wallpaper page
-│   └── engine.js         # the drawing engine: browser + Node
+│   ├── index.html        # homepage (hero, live style gallery, FAQ, SEO)
+│   ├── app.html          # the generator / dashboard  →  /app
+│   ├── docs.html         # API docs (generated: npm run docs)  →  /docs
+│   ├── live.html         # fullscreen live wallpaper page  →  /live
+│   ├── engine.js         # the drawing engine: browser + Node
+│   ├── fonts.css, site.css, fonts/   # self-hosted fonts and shared styles
+│   └── og.png, favicon*, manifest, robots.txt, sitemap.xml, llms.txt, 404.html
 ├── api/
 │   ├── wallpaper.js      # GET /api/wallpaper
 │   ├── random.js         # GET /api/random
 │   └── styles.js         # GET /api/styles
 ├── lib/render.js         # query → validated state → encoded image
 ├── test/                 # node:test suite (engine + handlers)
-├── scripts/dev-server.js # local server that mimics Vercel routes
+├── scripts/
+│   ├── dev-server.js     # local server that mimics Vercel routes
+│   ├── build-docs.js     # generates public/docs.html from the engine
+│   └── make-assets.js    # generates icons and the social preview image
 └── vercel.json           # routes, limits, headers
 ```
 
@@ -414,9 +422,28 @@ seedscape/
 git clone https://github.com/mskraban/seedscape.git
 cd seedscape
 npm install
-npm test            # 21 tests: determinism, frozen stills, loops, blur, validation, API
-npm run dev         # → http://localhost:3000  (app + API)
+npm test            # 34 tests: determinism, frozen stills, loops, blur, API, SEO and site integrity
+npm run dev         # → http://localhost:3000  (site + app + API)
+npm run docs        # regenerate public/docs.html after changing styles or parameters
+npm run assets      # regenerate icons and the 1200×630 social image
 ```
+
+## 🌐 The website
+
+<p align="center">
+  <img src="docs/home.jpg" alt="The Seedscape homepage with an interactive animated hero" width="92%">
+</p>
+
+| Route | Page |
+|-------|------|
+| [`/`](https://seedscape-azure.vercel.app) | Homepage: interactive hero (type a seed, the background changes), a live gallery of all 35 styles that animate on hover, features, API samples and FAQ. |
+| [`/app`](https://seedscape-azure.vercel.app/app) | The generator: category filters, **Surprise me**, blur, animation, loop recorder, size presets, recent history and a **Share & API** panel that builds the image, animated, live-wallpaper, Markdown and HTML snippets for your current settings. Press `?` for shortcuts. |
+| [`/docs`](https://seedscape-azure.vercel.app/docs) | Full API reference with live example images. Generated from the engine, so it cannot go stale (a test enforces it). |
+| [`/live`](https://seedscape-azure.vercel.app/live) | Fullscreen animated wallpaper. |
+
+**Typography:** [Inter](https://rsms.me/inter/) for text, [Bricolage Grotesque](https://github.com/ateliertriay/bricolage) for headings and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) for code and seeds. All three are self-hosted variable fonts under the SIL Open Font License (see `public/fonts/`), so there are no third-party requests and the app still works offline.
+
+**SEO:** every page has a unique title and description, a canonical URL, Open Graph and Twitter cards with a generated 1200×630 image, JSON-LD structured data (WebSite, SoftwareApplication, FAQPage, TechArticle), a sitemap, `robots.txt`, a web manifest, `llms.txt` and sensible cache headers. `npm test` checks all of it, so a regression fails CI. If you deploy under your own domain, search-and-replace `seedscape-azure.vercel.app` in `public/` and `scripts/`, then run `npm run docs`.
 
 ## ☁️ Deploy your own
 
@@ -460,7 +487,7 @@ Palettes are just arrays of hex colours in the `PALETTES` object. The optional `
 
 ## 🤝 Contributing
 
-Ideas and pull requests are very welcome. Good first contributions: a new palette, a new style, or a bug report with the exact URL that shows it (the URL contains everything needed to reproduce).
+Ideas and pull requests are very welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the checklist for adding a style, and how to report issues. Good first contributions: a new palette, a new style, or a bug report with the exact URL that shows it (the URL contains everything needed to reproduce).
 
 1. Fork and create a branch
 2. `npm test` must pass
@@ -468,7 +495,7 @@ Ideas and pull requests are very welcome. Good first contributions: a new palett
 
 ## 📜 License
 
-[MIT](LICENSE) © 2026 Mario Skraban. Wallpapers you generate are yours to use however you like.
+[MIT](LICENSE) © 2026 Mario Skraban. Bundled fonts are under the [SIL Open Font License](public/fonts/) (see [NOTICE.md](NOTICE.md)). Wallpapers you generate are yours to use however you like.
 
 <div align="center">
 <sub>If you like it, a ⭐ helps others find it.</sub>

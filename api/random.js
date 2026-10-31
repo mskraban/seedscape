@@ -25,5 +25,5 @@ module.exports = (req, res) => {
   const base = host ? `${proto}://${host}` : '';
   res.statusCode = 200;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.end(JSON.stringify({ seed, style, palette: pal, url: base + path, app: `${base}/#seed=${encodeURIComponent(seed)}&s=${style}&p=${encodeURIComponent(pal === 'auto' ? 'auto' : Object.keys(Seedscape.PALETTES).find((n) => n.toLowerCase().replace(/\s+/g, '-') === pal))}` }, null, 2));
+  res.end(JSON.stringify({ seed, style, palette: pal, url: base + path, app: `${base}/app#seed=${encodeURIComponent(seed)}&s=${style}&p=${encodeURIComponent(pal === 'auto' ? 'auto' : Object.keys(Seedscape.PALETTES).find((n) => n.toLowerCase().replace(/\s+/g, '-') === pal))}` }, null, 2));
 };

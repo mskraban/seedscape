@@ -1260,6 +1260,15 @@ const STYLES = {
   life:      { name: 'Life',      sub: 'game of life',    draw: life },
   dither:    { name: 'Dither',    sub: 'retro 1-bit look', draw: dither },
 };
+/* Gallery categories, shared by the app, the homepage and the API. */
+const CATEGORIES = {
+  scenes:   { name: 'Scenes',        styles: ['horizon', 'waves', 'forest', 'skyline', 'islands', 'synthwave', 'rays'] },
+  space:    { name: 'Space & light', styles: ['aurora', 'cosmos', 'planet', 'bokeh', 'network', 'metaballs'] },
+  patterns: { name: 'Patterns',      styles: ['mosaic', 'geometric', 'cubes', 'truchet', 'stained', 'hex', 'tartan', 'memphis', 'moire', 'maze'] },
+  tech:     { name: 'Tech & data',   styles: ['automata', 'topo', 'circuit', 'life', 'ridgelines', 'dither', 'glitch'] },
+  art:      { name: 'Art & motion',  styles: ['spiro', 'kaleido', 'flow', 'plasma', 'mesh'] },
+};
+for (const [id, c] of Object.entries(CATEGORIES)) for (const k of c.styles) STYLES[k].cat = id;
 const STYLE_KEYS = Object.keys(STYLES);
 
 /* ───────────────────────── Post effects ───────────────────────── */
@@ -1425,7 +1434,7 @@ function normalize(input, limits) {
 }
 
 return {
-  VERSION, STYLES, PALETTES, RES, DEFAULTS, GRAIN_FRAMES,
+  VERSION, STYLES, CATEGORIES, PALETTES, RES, DEFAULTS, GRAIN_FRAMES,
   makeRng, getPalette, getRes, gridPx, generate, present, render, normalize, randomSeed,
   helpers: { css, mix, hexToRgb, clamp },
 };

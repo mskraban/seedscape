@@ -1,0 +1,21 @@
+name: Bug report
+description: Something looks wrong or broken
+labels: [bug]
+body:
+  - type: input
+    id: url
+    attributes:
+      label: URL that shows the problem
+      description: Paste the full app link or API URL. It contains the seed, style, palette and size.
+      placeholder: https://seedscape-azure.vercel.app/app#seed=...
+    validations: { required: true }
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations: { required: true }
+  - type: input
+    id: env
+    attributes:
+      label: Browser and OS
+      placeholder: Chrome 130 on macOS

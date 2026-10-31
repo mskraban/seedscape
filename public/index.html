@@ -3,483 +3,418 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Seedscape — generative wallpaper maker</title>
-<meta name="description" content="Type a seed, get a unique wallpaper. Same seed, same art — always. Runs 100% offline in your browser.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230e0f13'/%3E%3Crect x='2' y='9' width='4' height='5' fill='%237c5cff'/%3E%3Crect x='6' y='5' width='4' height='9' fill='%23ff5ca8'/%3E%3Crect x='10' y='7' width='4' height='7' fill='%23ffd166'/%3E%3C/svg%3E">
+<title>Seedscape: Free Generative &amp; Animated Wallpaper Maker</title>
+<meta name="description" content="Turn any word into a unique 4K wallpaper. 35 styles, seamless animated loops, live wallpapers and a free image API. Open source, private and works offline.">
+<meta name="keywords" content="wallpaper generator, generative art, animated wallpaper, live wallpaper, procedural wallpaper, 4K wallpaper maker, desktop background, phone wallpaper, image API, seed">
+<meta name="author" content="Mario Skraban">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#08090d">
+<link rel="canonical" href="https://seedscape-azure.vercel.app/">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Seedscape">
+<meta property="og:title" content="Seedscape: wallpapers from a single word">
+<meta property="og:description" content="35 generative styles, seamless animated loops, live wallpapers and a free image API. Same seed, same art. Open source and private.">
+<meta property="og:url" content="https://seedscape-azure.vercel.app/">
+<meta property="og:image" content="https://seedscape-azure.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Seedscape: Wallpapers from a single word, over a neon synthwave landscape">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Seedscape: wallpapers from a single word">
+<meta name="twitter:description" content="35 generative styles, seamless animated loops, live wallpapers and a free image API.">
+<meta name="twitter:image" content="https://seedscape-azure.vercel.app/og.png">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" href="fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="site.css">
+
+<script>
+  // Old shared links used the root URL with a #seed=… hash; send them to the generator.
+  if (/^#seed=/.test(location.hash)) location.replace((location.protocol === 'file:' ? 'app.html' : '/app') + location.hash);
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://seedscape-azure.vercel.app/#website",
+      "url": "https://seedscape-azure.vercel.app/",
+      "name": "Seedscape",
+      "description": "Generative wallpaper maker with animated loops and a free image API.",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://seedscape-azure.vercel.app/#app",
+      "name": "Seedscape",
+      "url": "https://seedscape-azure.vercel.app/",
+      "applicationCategory": "DesignApplication",
+      "operatingSystem": "Any (web browser)",
+      "description": "Type a seed and get a unique, reproducible wallpaper in 35 generative styles, with seamless animation, live wallpapers, video export and a free image API.",
+      "image": "https://seedscape-azure.vercel.app/og.png",
+      "isAccessibleForFree": true,
+      "license": "https://opensource.org/licenses/MIT",
+      "softwareHelp": "https://seedscape-azure.vercel.app/docs",
+      "codeRepository": "https://github.com/mskraban/seedscape",
+      "author": { "@type": "Person", "name": "Mario Skraban", "url": "https://github.com/mskraban" },
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "featureList": [
+        "35 deterministic generative wallpaper styles",
+        "Seamless animated loops",
+        "Fullscreen live wallpaper page",
+        "MP4 / WebM loop recorder",
+        "Image API with PNG, JPEG, WebP and animated GIF/WebP",
+        "Works offline, no accounts, no tracking"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "What is a seed?", "acceptedAnswer": { "@type": "Answer", "text": "A seed is any text you type, such as a word, a name or a date. Seedscape turns it into a number and uses that number to make every random choice, so the same seed always produces exactly the same wallpaper, on any device." } },
+        { "@type": "Question", "name": "Is Seedscape free, and do you collect any data?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, it is free and open source under the MIT license. The generator runs entirely in your browser, needs no account, and uploads nothing. The image API is stateless and does not store or track requests." } },
+        { "@type": "Question", "name": "Can I use the wallpapers commercially?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The images you generate are yours to use however you like, including commercially. The code is MIT licensed." } },
+        { "@type": "Question", "name": "How do I get an animated or live wallpaper?", "acceptedAnswer": { "@type": "Answer", "text": "Tick Animate in the generator, then record a seamless loop as an MP4 or WebM video, or open the fullscreen Live page, which can also be used with live-wallpaper apps such as Lively on Windows. The API can return short animated WebP or GIF files too." } },
+        { "@type": "Question", "name": "What sizes can I download?", "acceptedAnswer": { "@type": "Answer", "text": "The generator exports PNG files from tiny to 7680 pixels wide, with presets for 4K, ultrawide, MacBook, iPhone and Android screens. The image API supports up to 4096 pixels per side." } },
+        { "@type": "Question", "name": "Does it work offline?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The generator is a static page with no external dependencies. Download the repository from GitHub, open app.html in a browser and everything works without internet." } }
+      ]
+    }
+  ]
+}
+</script>
+
 <style>
-  :root {
-    --bg: #0e0f13; --panel: #14161c; --panel2: #1a1d25; --border: #262a35;
-    --text: #e8eaf0; --muted: #8b92a3; --accent: #7c5cff; --accent2: #ff5ca8;
-  }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body {
-    background: var(--bg); color: var(--text);
-    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  }
-  .app { display: grid; grid-template-columns: 340px 1fr; height: 100%; }
-  aside {
-    background: var(--panel); border-right: 1px solid var(--border);
-    padding: 20px 20px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px;
-  }
-  header { display: flex; gap: 12px; align-items: center; }
-  .logo {
-    width: 40px; height: 40px; border-radius: 10px; flex: none;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    display: grid; place-items: center; font-size: 20px; color: #fff;
-  }
-  h1 { margin: 0; font-size: 20px; letter-spacing: .2px; }
-  header p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
-  section { display: flex; flex-direction: column; gap: 8px; }
-  section > label:first-child:not(.check) {
-    font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .row { display: flex; gap: 8px; align-items: center; }
-  .hidden { display: none !important; }
-  input[type=text], input[type=number], select {
-    width: 100%; background: var(--panel2); color: var(--text);
-    border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px;
-    font: inherit; outline: none;
-  }
-  input[type=text]:focus, input[type=number]:focus, select:focus { border-color: var(--accent); }
-  button {
-    background: var(--panel2); color: var(--text); border: 1px solid var(--border);
-    border-radius: 8px; padding: 9px 12px; font: inherit; cursor: pointer;
-    transition: border-color .15s, background .15s, transform .05s;
-  }
-  button:hover { border-color: #3a4052; background: #20242e; }
-  button:active { transform: translateY(1px); }
-  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-  button.icon { padding: 9px 11px; flex: none; font-size: 16px; line-height: 1; }
-  button.primary {
-    background: linear-gradient(135deg, var(--accent), var(--accent2)); border: 0; color: #fff; font-weight: 600;
-  }
-  button.primary:hover { filter: brightness(1.08); }
-  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  #styles { grid-template-columns: repeat(4, 1fr); gap: 5px; }
-  #styles button { padding: 7px 2px; font-size: 11.5px; }
-  #styles button small { display: none; }
-  .grid3 button { padding: 7px 4px; font-size: 12.5px; text-align: center; }
-  .grid3 button small { display: block; color: var(--muted); font-size: 10.5px; }
-  .grid3 button.on { border-color: var(--accent); background: #211d3d; }
-  .swatch { display: flex; height: 18px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
-  .swatch i { flex: 1; }
-  .check { display: flex; gap: 8px; align-items: center; color: var(--text); cursor: pointer; font-size: 13.5px; text-transform: none; letter-spacing: 0; }
-  .checks { flex-direction: row; gap: 18px; }
-  input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
-  input[type=range] { width: 100%; accent-color: var(--accent); }
-  output { color: var(--text); text-transform: none; letter-spacing: 0; font-size: 12px; }
-  .actions { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; }
-  .actions.two { grid-template-columns: 1fr 1fr; margin-top: 8px; }
-  label.sub { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; margin-top: 6px; }
-  button.recording { border-color: #ff5c5c; color: #ff9a9a; }
-  footer { margin-top: auto; color: var(--muted); font-size: 11.5px; line-height: 1.7; }
-  kbd {
-    background: var(--panel2); border: 1px solid var(--border); border-bottom-width: 2px;
-    border-radius: 4px; padding: 0 5px; font: 11px ui-monospace, Menlo, Consolas, monospace; color: var(--text);
-  }
-  main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-  .stage {
-    flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 28px;
-    background:
-      radial-gradient(circle at 50% 40%, #171a22, var(--bg) 70%);
-  }
-  canvas#out {
-    max-width: 100%; max-height: 100%; border-radius: 6px; cursor: zoom-in;
-    box-shadow: 0 20px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.06);
-  }
-  canvas#out:fullscreen { width: 100vw; height: 100vh; max-width: none; max-height: none; object-fit: contain; background: #000; border-radius: 0; box-shadow: none; cursor: zoom-out; }
-  .recent { border-top: 1px solid var(--border); background: var(--panel); padding: 10px 16px 12px; }
-  .recent-head { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
-  .recent-head button { padding: 0 6px; font-size: 11px; background: none; border: 0; color: var(--muted); }
-  .recent-head button:hover { color: var(--text); }
-  .strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; min-height: 66px; }
-  .strip .empty { color: var(--muted); font-size: 12.5px; align-self: center; }
-  .strip button { padding: 0; border-radius: 6px; overflow: hidden; flex: none; width: 112px; height: 62px; border: 1px solid var(--border); }
-  .strip button:hover { border-color: var(--accent); }
-  .strip img { width: 100%; height: 100%; display: block; object-fit: cover; }
-  #toast {
-    position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0;
-    background: #20242e; border: 1px solid var(--border); padding: 9px 16px; border-radius: 999px;
-    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 10;
-  }
-  #toast.show { opacity: 1; transform: translate(-50%, 0); }
-  @media (max-width: 860px) {
-    .app { grid-template-columns: 1fr; height: auto; }
-    aside { border-right: 0; border-bottom: 1px solid var(--border); }
-    .stage { padding: 16px; min-height: 55vh; }
-    footer { display: none; }
-  }
+  /* ── hero ── */
+  .hero { position: relative; min-height: min(92vh, 860px); display: grid; align-items: end; overflow: hidden; border-bottom: 1px solid var(--line); isolation: isolate; }
+  #hero { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; transition: opacity .55s ease; }
+  #hero.out { opacity: 0; }
+  .hero-shade { position: absolute; inset: 0; z-index: -1; background:
+    linear-gradient(180deg, rgba(8,9,13,.55) 0%, rgba(8,9,13,.2) 30%, rgba(8,9,13,.78) 78%, var(--bg) 100%),
+    radial-gradient(ellipse at 30% 70%, rgba(8,9,13,.72), transparent 65%); }
+  .hero-inner { padding-top: 96px; padding-bottom: 72px; }
+  .hero h1 { font-size: clamp(44px, 8vw, 104px); font-weight: 800; letter-spacing: -.04em; line-height: .98; max-width: 15ch; text-wrap: balance; }
+  .hero .lead { color: #c4cade; font-size: clamp(17px, 2vw, 21px); max-width: 52ch; margin-top: 26px; }
+  .seedform { display: flex; gap: 10px; margin-top: 34px; flex-wrap: wrap; max-width: 640px; }
+  .seedform .field { flex: 1 1 280px; display: flex; align-items: center; gap: 10px; background: rgba(12, 14, 21, .72); border: 1px solid var(--line2); border-radius: 999px; padding: 0 8px 0 22px; backdrop-filter: blur(10px); transition: border-color .15s; }
+  .seedform .field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(139, 108, 255, .2); }
+  .seedform .field span { color: var(--faint); font: 500 13px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+  .seedform input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: var(--text); font: 500 17px var(--font-mono); padding: 17px 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; align-items: center; }
+  .chips > span { color: var(--faint); font-size: 13.5px; margin-right: 4px; }
+  .chip { border: 1px solid var(--line2); background: rgba(12, 14, 21, .6); backdrop-filter: blur(8px); color: var(--muted); font: 500 13.5px var(--font-body); padding: 7px 14px; border-radius: 999px; cursor: pointer; transition: all .15s; }
+  .chip:hover { color: var(--text); border-color: rgba(255, 255, 255, .35); }
+  .chip[aria-pressed='true'] { color: #12101c; background: #fff; border-color: #fff; font-weight: 600; }
+  .stats { display: flex; flex-wrap: wrap; gap: 14px 38px; margin-top: 56px; }
+  .stats div { font: 700 34px/1 var(--font-display); letter-spacing: -.03em; }
+  .stats small { display: block; font: 500 13px var(--font-body); color: var(--muted); letter-spacing: 0; margin-top: 8px; }
+
+  /* ── steps ── */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; counter-reset: s; }
+  .step { counter-increment: s; position: relative; padding: 30px 28px 28px; border-radius: var(--radius); border: 1px solid var(--line); background: linear-gradient(180deg, var(--panel), var(--bg2)); }
+  .step::before { content: '0' counter(s); font: 700 15px var(--font-mono); background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .step h3 { font-size: 23px; margin: 14px 0 8px; }
+  .step p { color: var(--muted); font-size: 15.5px; }
+  .step code { font-size: .85em; }
+  @media (max-width: 860px) { .steps { grid-template-columns: 1fr; } }
+
+  /* ── gallery ── */
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 28px; }
+  .filters .chip { background: var(--panel); backdrop-filter: none; }
+  .filters .chip[aria-pressed='true'] { background: #fff; color: #12101c; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; }
+  .tile { display: block; text-decoration: none; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); transition: transform .2s, border-color .2s, box-shadow .25s; }
+  .tile:hover, .tile:focus-visible { transform: translateY(-4px); border-color: var(--line2); box-shadow: 0 18px 50px -18px rgba(0, 0, 0, .8), 0 0 0 1px rgba(255, 255, 255, .06); }
+  .tile canvas { display: block; width: 100%; aspect-ratio: 16 / 9; background: #0d0f16; }
+  .tile .cap { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 13px 16px 15px; }
+  .tile b { font: 700 16.5px var(--font-display); letter-spacing: -.01em; }
+  .tile small { color: var(--faint); font-size: 13px; }
+  .tile.hide { display: none; }
+  .hint { color: var(--faint); font-size: 14px; margin-top: 22px; }
+
+  /* ── features ── */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 960px) { .cards { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 620px) { .cards { grid-template-columns: 1fr; } }
+
+  /* ── api ── */
+  .apigrid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 28px; align-items: start; }
+  @media (max-width: 960px) { .apigrid { grid-template-columns: minmax(0, 1fr); } }
+  .apigrid > * { min-width: 0; }
+  .apigrid .stack { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+  .previews { display: grid; gap: 14px; }
+  .previews figure { margin: 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
+  .previews img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #0d0f16; }
+  .previews figcaption { padding: 11px 16px; font: 500 12.5px var(--font-mono); color: var(--muted); border-top: 1px solid var(--line); word-break: break-all; }
+
+  /* ── cta ── */
+  .cta { margin: 0 0 100px; padding: 72px 28px; text-align: center; border-radius: 28px; border: 1px solid var(--line2); background:
+    radial-gradient(ellipse at 20% 0%, rgba(139, 108, 255, .3), transparent 55%),
+    radial-gradient(ellipse at 90% 100%, rgba(255, 92, 168, .26), transparent 55%), var(--panel); }
+  .cta h2 { font-size: clamp(32px, 5vw, 56px); margin: 0 auto; max-width: 16ch; }
+  .cta p { color: var(--muted); margin: 18px auto 34px; max-width: 48ch; }
+  .cta .row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 </head>
 <body>
-<div class="app">
-  <aside>
-    <header>
-      <div class="logo">▦</div>
-      <div>
-        <h1>Seedscape</h1>
-        <p>Type a seed. Get a wallpaper. Same seed, same art — always.</p>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="container">
+    <a class="brand" href="/" aria-label="Seedscape home">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b6cff"/><stop offset=".55" stop-color="#ff5ca8"/><stop offset="1" stop-color="#ffc15c"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="#0b0c11" stroke="rgba(255,255,255,.12)"/><rect x="11" y="33" width="12" height="20" rx="3" fill="url(#lg)"/><rect x="26" y="17" width="12" height="36" rx="3" fill="url(#lg)"/><rect x="41" y="25" width="12" height="28" rx="3" fill="url(#lg)"/></svg>
+      Seedscape
+    </a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#styles">Styles</a>
+      <a href="#features">Features</a>
+      <a href="/docs">API</a>
+      <a href="/live">Live</a>
+      <a href="https://github.com/mskraban/seedscape" rel="noopener">GitHub</a>
+      <a class="btn primary sm keep" href="/app">Open the app</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" aria-labelledby="h1">
+    <canvas id="hero" aria-hidden="true"></canvas>
+    <div class="hero-shade"></div>
+    <div class="container hero-inner">
+      <div class="eyebrow">Open source · free · works offline</div>
+      <h1 id="h1">Wallpapers from <span class="grad-text">a single word.</span></h1>
+      <p class="lead">Seedscape turns any text into a unique, animated wallpaper. The same seed always makes the same art. 35 styles, a free image API, and nothing to install.</p>
+
+      <form class="seedform" id="seedform" action="/app" method="get" autocomplete="off">
+        <label class="field">
+          <span>seed</span>
+          <input id="seedin" name="seed" type="text" value="hello-seedscape" spellcheck="false" maxlength="60" aria-label="Type any word to change the wallpaper behind this text">
+        </label>
+        <button class="btn primary" type="submit">Open in generator <span aria-hidden="true">→</span></button>
+      </form>
+
+      <div class="chips" id="chips" role="group" aria-label="Preview style">
+        <span>Try a style:</span>
       </div>
-    </header>
 
-    <section>
-      <label for="seed">Seed</label>
-      <div class="row">
-        <input id="seed" type="text" spellcheck="false" autocomplete="off" placeholder="type anything…">
-        <button id="rand" class="icon" title="Random seed (R)" aria-label="Random seed">🎲</button>
+      <div class="stats" aria-label="Seedscape at a glance">
+        <div>35<small>generative styles</small></div>
+        <div>12<small>hand-tuned palettes</small></div>
+        <div>∞<small>seeds, each unique</small></div>
+        <div>0<small>accounts or trackers</small></div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section>
-      <label>Style</label>
-      <div id="styles" class="grid3"></div>
-    </section>
-
-    <section>
-      <label for="pal">Palette</label>
-      <select id="pal"></select>
-      <div id="swatch" class="swatch"></div>
-      <label class="check"><input type="checkbox" id="invert"> Invert light / dark</label>
-    </section>
-
-    <section>
-      <label for="res">Size</label>
-      <select id="res"></select>
-      <div id="custom" class="row hidden">
-        <input id="cw" type="number" min="64" max="7680" value="1920" aria-label="Width">
-        <span>×</span>
-        <input id="ch" type="number" min="64" max="7680" value="1080" aria-label="Height">
+  <section class="section" id="how" aria-labelledby="how-h">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">How it works</div>
+        <h2 class="h2" id="how-h">Three steps. No sign-up.</h2>
       </div>
-    </section>
+      <div class="steps">
+        <div class="step"><h3>Type a seed</h3><p>Any word, name or date works. <code>moonlight</code>, <code>2026-10-31</code>, your dog's name. Every seed makes a different picture, and it never changes.</p></div>
+        <div class="step"><h3>Pick a style</h3><p>Pixel landscapes, synthwave suns, planets, mazes, kaleidoscopes, nebulae. Mix in a palette, blur, grain and any size from a phone to 8K.</p></div>
+        <div class="step"><h3>Download, animate, embed</h3><p>Save a PNG, record a seamless MP4 loop, run it fullscreen as a live wallpaper, or call the API from your own site.</p></div>
+      </div>
+    </div>
+  </section>
 
-    <section>
-      <label for="px">Pixel size <output id="pxv"></output></label>
-      <input id="px" type="range" min="1" max="16" step="1" value="4">
-    </section>
+  <section class="section" id="styles" aria-labelledby="styles-h" style="padding-top:20px">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">The gallery</div>
+        <h2 class="h2" id="styles-h">35 styles. Hover to see them move.</h2>
+        <p class="lead">Every tile below is drawn live in your browser by the same engine that powers the app and the API. Click one to open it in the generator.</p>
+      </div>
+      <div class="filters" id="filters" role="group" aria-label="Filter styles"></div>
+      <div class="grid" id="grid"></div>
+      <p class="hint">Tiles animate on hover or keyboard focus. Motion is off if your system prefers reduced motion.</p>
+    </div>
+  </section>
 
-    <section>
-      <label for="blur">Blur <output id="blurv"></output></label>
-      <input id="blur" type="range" min="0" max="30" step="1" value="0">
-    </section>
+  <section class="section" id="features" aria-labelledby="feat-h" style="padding-top:40px">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">Why Seedscape</div>
+        <h2 class="h2" id="feat-h">Made to be shared, remixed and embedded.</h2>
+      </div>
+      <div class="cards">
+        <article class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/></svg></div><h3>Truly reproducible</h3><p>A seed fully determines the image, on any device, forever. Share a seed or a link and everyone sees exactly the same wallpaper. Old seeds are protected by tests, so updates never change them.</p></article>
+        <article class="card"><div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m10 8 6 4-6 4z"/></svg></div><h3>Seamless animation</h3><p>Every style loops perfectly. Run it live, open the fullscreen wallpaper page, record an MP4, or fetch an animated WebP or GIF from the API.</p></article>
+        <article class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg></div><h3>35 styles, endless variety</h3><p>Landscapes, space scenes, patterns, circuit boards and data art, with 12 palettes plus one generated from your seed. Tune pixel size, blur, grain and vignette.</p></article>
+        <article class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg></div><h3>A free image API</h3><p>Drop a URL into an <code>&lt;img&gt;</code> tag and get a PNG, JPEG or WebP. CORS is open, results are cached forever, and the docs are one page long.</p></article>
+        <article class="card"><div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><h3>Private by design</h3><p>The generator runs entirely in your browser. No accounts, no cookies, no analytics. It even works offline once you have the page.</p></article>
+        <article class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/></svg></div><h3>Open source, MIT</h3><p>One small drawing engine shared by the browser and the server. Adding a style is a single function. Contributions are welcome.</p></article>
+      </div>
+    </div>
+  </section>
 
-    <section>
-      <label for="anim">Animation <output id="animv"></output></label>
-      <label class="check"><input type="checkbox" id="anim"> Animate (seamless loop)</label>
-      <div id="animrow" class="hidden">
-        <label for="dur" class="sub">Loop length <output id="durv"></output></label>
-        <input id="dur" type="range" min="2" max="30" step="1" value="8">
-        <div class="actions two">
-          <button id="rec" title="Record one loop as a video">⏺ Record loop</button>
-          <button id="live" title="Open fullscreen live wallpaper">Open live ↗</button>
+  <section class="section" id="api" aria-labelledby="api-h" style="padding-top:40px">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">For developers</div>
+        <h2 class="h2" id="api-h">A wallpaper is one URL away.</h2>
+        <p class="lead">No keys, no SDK. Put the parameters in the query string and use the result anywhere an image fits: a README banner, a blog header, a CSS background.</p>
+      </div>
+      <div class="apigrid">
+        <div class="stack">
+          <div class="codewrap"><pre class="code" id="c1"><span class="c">&lt;!-- an image, anywhere --&gt;</span>
+<span class="k">&lt;img</span> src=<span class="s">"https://seedscape-azure.vercel.app/api/wallpaper?seed=hello&amp;style=aurora&amp;size=1200x400"</span> <span class="k">/&gt;</span></pre><button class="copy" data-copy="c1">Copy</button></div>
+          <div class="codewrap"><pre class="code" id="c2"><span class="c"># a seamless animated loop</span>
+curl -o loop.webp <span class="s">"https://seedscape-azure.vercel.app/api/wallpaper?seed=hello&amp;style=planet&amp;animate=1"</span></pre><button class="copy" data-copy="c2">Copy</button></div>
+          <div class="codewrap"><pre class="code" id="c3"><span class="c">/* a CSS background */</span>
+body { background: url(<span class="s">"https://seedscape-azure.vercel.app/api/wallpaper?seed=my-site&amp;style=mesh&amp;blur=6&amp;format=webp"</span>) center / cover; }</pre><button class="copy" data-copy="c3">Copy</button></div>
+          <p><a class="btn" href="/docs">Read the API docs <span aria-hidden="true">→</span></a></p>
+        </div>
+        <div class="previews">
+          <figure><img src="api/wallpaper?seed=hello&amp;style=aurora&amp;palette=neon&amp;size=640x360&amp;format=webp" alt="Aurora wallpaper generated live by the Seedscape API" width="640" height="360" loading="lazy"><figcaption>/api/wallpaper?seed=hello&amp;style=aurora</figcaption></figure>
+          <figure><img src="api/wallpaper?seed=hello&amp;style=planet&amp;palette=ocean&amp;animate=1&amp;size=640x360&amp;frames=18&amp;fps=12" alt="Animated rotating planet generated live by the Seedscape API" width="640" height="360" loading="lazy"><figcaption>…&amp;style=planet&amp;animate=1</figcaption></figure>
         </div>
       </div>
-    </section>
-
-    <section class="checks">
-      <label class="check"><input type="checkbox" id="grain"> Film grain</label>
-      <label class="check"><input type="checkbox" id="vig"> Vignette</label>
-    </section>
-
-    <section class="actions">
-      <button id="dl" class="primary">Download PNG</button>
-      <button id="link">Copy link</button>
-    </section>
-
-    <footer>
-      <kbd>R</kbd> / <kbd>Space</kbd> new seed · <kbd>1</kbd>–<kbd>9</kbd> style · <kbd>[</kbd> <kbd>]</kbd> prev/next style<br>
-      <kbd>A</kbd> animate · <kbd>D</kbd> download · <kbd>L</kbd> copy link · <kbd>F</kbd> / double-click fullscreen
-    </footer>
-  </aside>
-
-  <main>
-    <div class="stage"><canvas id="out" width="1920" height="1080" title="Double-click for fullscreen"></canvas></div>
-    <div class="recent">
-      <div class="recent-head"><span>Recent</span><button id="clear" title="Clear recent">clear</button></div>
-      <div id="recent" class="strip"></div>
     </div>
-  </main>
-</div>
-<div id="toast" role="status" aria-live="polite"></div>
+  </section>
+
+  <section class="section" id="faq" aria-labelledby="faq-h" style="padding-top:40px">
+    <div class="container" style="max-width:860px">
+      <div class="section-head"><div class="eyebrow">Questions</div><h2 class="h2" id="faq-h">Good to know.</h2></div>
+      <details class="faq"><summary>What is a seed?</summary><p>A seed is any text you type: a word, a name, a date. Seedscape turns it into a number and uses that number to make every random choice, so the same seed always produces exactly the same wallpaper, on any device.</p></details>
+      <details class="faq"><summary>Is Seedscape free, and do you collect any data?</summary><p>Yes, it is free and open source under the MIT license. The generator runs entirely in your browser, needs no account, and uploads nothing. The image API is stateless and does not store or track requests.</p></details>
+      <details class="faq"><summary>Can I use the wallpapers commercially?</summary><p>Yes. The images you generate are yours to use however you like, including commercially. The code is MIT licensed.</p></details>
+      <details class="faq"><summary>How do I get an animated or live wallpaper?</summary><p>Tick <b>Animate</b> in the generator, then record a seamless loop as an MP4 or WebM video, or open the fullscreen <a href="/live">Live page</a>, which can also be used with live-wallpaper apps such as Lively on Windows. The API can return short animated WebP or GIF files too.</p></details>
+      <details class="faq"><summary>What sizes can I download?</summary><p>The generator exports PNG files from tiny to 7680 pixels wide, with presets for 4K, ultrawide, MacBook, iPhone and Android screens. The image API supports up to 4096 pixels per side.</p></details>
+      <details class="faq"><summary>Does it work offline?</summary><p>Yes. The generator is a static page with no external dependencies. Download the repository from <a href="https://github.com/mskraban/seedscape" rel="noopener">GitHub</a>, open <code>app.html</code> in a browser and everything works without internet.</p></details>
+    </div>
+  </section>
+
+  <div class="container">
+    <div class="cta">
+      <h2>Give your screen something new.</h2>
+      <p>It takes ten seconds, costs nothing, and the result is one of a kind.</p>
+      <div class="row"><a class="btn primary" href="/app">Open the generator</a><a class="btn" href="/live">Watch a live wallpaper</a></div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div>
+      <a class="brand" href="/" style="margin-bottom:14px"><svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#0b0c11" stroke="rgba(255,255,255,.12)"/><rect x="11" y="33" width="12" height="20" rx="3" fill="url(#lg)"/><rect x="26" y="17" width="12" height="36" rx="3" fill="url(#lg)"/><rect x="41" y="25" width="12" height="28" rx="3" fill="url(#lg)"/></svg>Seedscape</a>
+      <p style="max-width:34ch">Deterministic generative wallpapers: same seed, same art. Free and open source.</p>
+    </div>
+    <div><h4>Product</h4><a href="/app">Generator</a><a href="/live">Live wallpaper</a><a href="#styles">Style gallery</a></div>
+    <div><h4>Developers</h4><a href="/docs">API docs</a><a href="https://github.com/mskraban/seedscape" rel="noopener">GitHub</a><a href="https://github.com/mskraban/seedscape/issues" rel="noopener">Report an issue</a></div>
+    <div><h4>Project</h4><a href="https://github.com/mskraban/seedscape/blob/main/README.md" rel="noopener">README</a><a href="https://github.com/mskraban/seedscape/blob/main/LICENSE" rel="noopener">MIT license</a><a href="/sitemap.xml">Sitemap</a></div>
+    <div class="fine"><span>© 2026 Mario Skraban · MIT licensed</span><span>Fonts: Inter, Bricolage Grotesque, JetBrains Mono (SIL OFL)</span></div>
+  </div>
+</footer>
 
 <script src="engine.js"></script>
 <script>
 (() => {
 'use strict';
+const { STYLES, CATEGORIES, generate, present } = Seedscape;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+const $ = (s, r = document) => r.querySelector(s);
+const online = location.protocol !== 'file:';
+const link = (p) => (online ? '/' + p : p + '.html');
 
-const { STYLES, PALETTES, RES, getPalette, getRes, generate, present, randomSeed, helpers } = Seedscape;
-const { css, clamp } = helpers;
-const STYLE_KEYS = Object.keys(STYLES);
-const makeCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+/* [style, seed, palette] used for every tile and the hero chips */
+const PICKS = {
+  horizon: ['golden-fox-212', 'dusk'], aurora: ['northern-lights', 'neon'], mosaic: ['pixel-party', 'neon'], waves: ['lazy-summer-77', 'sakura'],
+  geometric: ['bauhaus-42', 'candy'], automata: ['rule-of-three', 'ocean'], cubes: ['golden-fox-212', 'dusk'], topo: ['lunar-ridge-318', 'neon'],
+  truchet: ['quiet-harbor-505', 'ocean'], cosmos: ['golden-fox-212', 'sakura'], stained: ['velvet-night', 'candy'], rays: ['sunny-reef-204', 'autumn'],
+  skyline: ['golden-fox-212', 'ocean'], spiro: ['golden-fox-212', 'desert'], flow: ['golden-fox-212', 'forest'], plasma: ['golden-fox-212', 'neon'],
+  forest: ['misty-cedar-318', 'dusk'], hex: ['golden-fox-212', 'candy'], planet: ['golden-fox-212', 'ocean'], maze: ['golden-fox-212', 'neon'],
+  circuit: ['golden-fox-212', 'forest'], kaleido: ['golden-fox-212', 'candy'], islands: ['golden-fox-212', 'ocean'], ridgelines: ['golden-fox-212', 'mono'],
+  bokeh: ['golden-fox-212', 'neon'], glitch: ['golden-fox-212', 'dusk'], memphis: ['golden-fox-212', 'neon'], synthwave: ['golden-fox-212', 'neon'],
+  tartan: ['golden-fox-212', 'autumn'], network: ['golden-fox-212', 'neon'], mesh: ['golden-fox-212', 'sakura'], moire: ['golden-fox-212', 'candy'],
+  metaballs: ['golden-fox-212', 'dusk'], life: ['golden-fox-212', 'ocean'], dither: ['b', 'neon'],
+};
+const state = (style, seed, pal, w, h, px = 4) => ({ seed, style, pal: palName(pal), res: 'custom', cw: w, ch: h, px, blur: 0, grain: false, vig: true, invert: false });
+const cap = (n) => n.replace(/^./, (c) => c.toUpperCase());
+const palName = (p) => (p === 'auto' ? 'auto' : p.split('-').map(cap).join(' '));   // 'game-boy' → 'Game Boy'
 
-/* ───────────────────────── State ───────────────────────── */
-function defaultState() {
-  return { seed: randomSeed(), style: 'horizon', pal: 'auto', res: '1920x1080', cw: 1920, ch: 1080, px: 4, blur: 0, anim: false, dur: 8, grain: true, vig: true, invert: false };
+/* ───────── hero: interactive, animated ───────── */
+const hero = $('#hero'), seedin = $('#seedin'), chips = $('#chips');
+const HERO_STYLES = ['synthwave', 'aurora', 'planet', 'kaleido', 'cosmos', 'horizon', 'topo', 'tartan'];
+const HERO_PAL = { synthwave: 'neon', aurora: 'neon', planet: 'ocean', kaleido: 'candy', cosmos: 'sakura', horizon: 'dusk', topo: 'neon', tartan: 'autumn' };
+let hStyle = HERO_STYLES[Math.floor(Math.random() * 3)], hSeed = seedin.value, t0 = performance.now(), raf = 0, last = 0, hidden = false;
+const hw = Math.min(960, Math.max(480, innerWidth)), hh = Math.round(hw * 0.56);
+function heroFrame(now) {
+  raf = requestAnimationFrame(heroFrame);
+  if (hidden || now - last < 40) return;          // ~25 fps keeps the page light
+  last = now;
+  const t = reduce ? 0.35 : (((now - t0) / 1000) / 16) % 1;
+  present(generate(state(hStyle, hSeed, HERO_PAL[hStyle] || 'auto', hw, hh), mk, t), hero);
 }
-function stateToParams(st) {
-  const p = new URLSearchParams();
-  p.set('seed', st.seed); p.set('s', st.style); p.set('p', st.pal); p.set('r', st.res);
-  if (st.res === 'custom') { p.set('cw', st.cw); p.set('ch', st.ch); }
-  p.set('px', st.px); if (st.blur) p.set('b', st.blur); p.set('g', st.grain ? 1 : 0); p.set('v', st.vig ? 1 : 0); p.set('i', st.invert ? 1 : 0);
-  if (st.anim) { p.set('a', 1); p.set('d', st.dur); }
-  return p;
-}
-function stateFromParams(p) {
-  if (!p.has('seed')) return null;
-  const st = defaultState();
-  st.seed = p.get('seed');
-  if (STYLES[p.get('s')]) st.style = p.get('s');
-  const pal = p.get('p'); if (pal === 'auto' || PALETTES[pal]) st.pal = pal;
-  const r = p.get('r'); if (RES.some((x) => x[0] === r)) st.res = r;
-  const num = (k, lo, hi, def) => { const v = parseInt(p.get(k), 10); return Number.isFinite(v) ? clamp(v, lo, hi) : def; };
-  st.cw = num('cw', 64, 7680, st.cw); st.ch = num('ch', 64, 7680, st.ch);
-  st.px = num('px', 1, 16, st.px);
-  st.blur = num('b', 0, 30, 0);
-  st.anim = p.get('a') === '1'; st.dur = num('d', 2, 30, 8);
-  if (p.has('g')) st.grain = p.get('g') === '1';
-  if (p.has('v')) st.vig = p.get('v') === '1';
-  if (p.has('i')) st.invert = p.get('i') === '1';
-  return st;
-}
-
-/* ───────────────────────── UI ───────────────────────── */
-const $ = (id) => document.getElementById(id);
-const out = $('out');
-let state = stateFromParams(new URLSearchParams(location.hash.slice(1))) || defaultState();
-
-function buildControls() {
-  $('styles').innerHTML = '';
-  STYLE_KEYS.forEach((k, i) => {
-    const b = document.createElement('button');
-    b.dataset.style = k;
-    b.innerHTML = `${STYLES[k].name}<small>${STYLES[k].sub}</small>`;
-    b.title = `${STYLES[k].name} — ${STYLES[k].sub}` + (i < 9 ? ` (${i + 1})` : '');
-    b.addEventListener('click', () => { state.style = k; sync(); render(); remember(); });
-    $('styles').appendChild(b);
+new IntersectionObserver(([e]) => { hidden = !e.isIntersecting; }).observe(hero);
+HERO_STYLES.forEach((s) => {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = cap(s); b.setAttribute('aria-pressed', s === hStyle);
+  b.addEventListener('click', () => {
+    hero.classList.add('out');
+    setTimeout(() => { hStyle = s; chips.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', c === b)); hero.classList.remove('out'); }, 300);
   });
-  const pal = $('pal');
-  pal.innerHTML = '<option value="auto">Auto — generated from seed</option>' +
-    Object.keys(PALETTES).map((n) => `<option>${n}</option>`).join('');
-  $('res').innerHTML = RES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
-}
-function sync() {
-  $('seed').value = state.seed;
-  $('pal').value = state.pal;
-  $('invert').checked = state.invert;
-  $('res').value = state.res;
-  $('custom').classList.toggle('hidden', state.res !== 'custom');
-  $('cw').value = state.cw; $('ch').value = state.ch;
-  $('px').value = state.px;
-  $('pxv').textContent = state.px <= 1 ? 'smooth (native)' : `${state.px}×`;
-  $('blur').value = state.blur;
-  $('blurv').textContent = state.blur ? `${state.blur}` : 'off';
-  $('anim').checked = state.anim; $('animrow').classList.toggle('hidden', !state.anim);
-  $('dur').value = state.dur; $('durv').textContent = `${state.dur}s`;
-  if (!state.anim) $('animv').textContent = '';
-  $('grain').checked = state.grain; $('vig').checked = state.vig;
-  document.querySelectorAll('#styles button').forEach((b) => b.classList.toggle('on', b.dataset.style === state.style));
-}
-function updateSwatch() {
-  $('swatch').innerHTML = getPalette(state).map((c) => `<i style="background:${css(c)}"></i>`).join('');
-}
-function writeHash() {
-  try { history.replaceState(null, '', '#' + stateToParams(state).toString()); } catch (e) { /* file:// restrictions */ }
-}
-function render() {
-  if (animOn) { updateSwatch(); writeHash(); return; }
-  const t0 = performance.now();
-  present(generate(state, makeCanvas), out);
-  updateSwatch();
-  writeHash();
-  render.last = performance.now() - t0;
-}
-/* ───────────── Animation: a seamless loop driven by wall-clock time ───────────── */
-let animOn = false, animStart = 0, animRaf = 0, animFrames = 0, animFpsT = 0, animFps = 0;
-function animState() {
-  // Live frames are drawn at most 1280px on the long edge: plenty for the screen and fast enough to stay smooth.
-  const { W, H } = getRes(state), k = Math.min(1, 1280 / Math.max(W, H));
-  return Object.assign({}, state, { res: 'custom', cw: Math.max(64, 2 * Math.round((W * k) / 2)), ch: Math.max(64, 2 * Math.round((H * k) / 2)) });
-}
-function tick(now) {
-  if (!animOn) return;
-  present(generate(animState(), makeCanvas, ((now - animStart) / 1000 / state.dur) % 1), out);
-  animFrames++;
-  if (now - animFpsT > 600) { animFps = Math.round((animFrames * 1000) / (now - animFpsT)); animFrames = 0; animFpsT = now; $('animv').textContent = `${animFps} fps`; }
-  animRaf = requestAnimationFrame(tick);
-}
-function startAnim() {
-  if (animOn) return;
-  animOn = true; animStart = performance.now(); animFpsT = animStart; animFrames = 0;
-  out.style.cursor = 'default'; animRaf = requestAnimationFrame(tick);
-}
-function stopAnim() {
-  animOn = false; cancelAnimationFrame(animRaf); out.style.cursor = ''; render();
-}
-function setAnim(on) { state.anim = on; sync(); on ? (startAnim(), writeHash()) : (stopAnim(), writeHash()); }
+  chips.appendChild(b);
+});
+let typing = 0;
+seedin.addEventListener('input', () => { clearTimeout(typing); typing = setTimeout(() => { hSeed = seedin.value || 'seedscape'; }, 90); });
+$('#seedform').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const q = new URLSearchParams({ seed: seedin.value || 'seedscape', s: hStyle, p: palName(HERO_PAL[hStyle] || 'auto'), a: 1, d: 10 });
+  location.href = link('app') + '#' + q.toString();
+});
+heroFrame(performance.now());
 
-let recording = false;
-async function recordLoop() {
-  if (recording) return;
-  if (!window.MediaRecorder || !out.captureStream) { toast('Recording is not supported in this browser'); return; }
-  const wasOn = state.anim;
-  if (!wasOn) setAnim(true);
-  animStart = performance.now();            // restart the clock so the recording begins at the start of the loop
-  const mime = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((t) => MediaRecorder.isTypeSupported(t));
-  const rec = new MediaRecorder(out.captureStream(30), mime ? { mimeType: mime, videoBitsPerSecond: 10000000 } : {});
-  const chunks = [], btn = $('rec'), t0 = performance.now(), ms = state.dur * 1000;
-  rec.ondataavailable = (e) => e.data && e.data.size && chunks.push(e.data);
-  rec.onstop = () => {
-    recording = false; btn.classList.remove('recording'); btn.textContent = '⏺ Record loop';
-    const type = rec.mimeType || 'video/webm', blob = new Blob(chunks, { type }), a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `seedscape-${slug(state.seed)}-${state.style}-loop.${type.includes('mp4') ? 'mp4' : 'webm'}`;
-    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    toast(`Saved ${a.download} (${animFps || '?'} fps)`);
-    if (!wasOn) setAnim(false);
-  };
-  recording = true; btn.classList.add('recording'); rec.start();
-  const iv = setInterval(() => { const left = Math.max(0, Math.ceil((ms - (performance.now() - t0)) / 1000)); btn.textContent = `● Recording… ${left}s`; if (!recording) clearInterval(iv); }, 250);
-  setTimeout(() => rec.state !== 'inactive' && rec.stop(), ms + 80);
-}
+/* ───────── gallery: 35 live tiles, lazy-rendered, animate on hover ───────── */
+const grid = $('#grid'), filters = $('#filters'), tiles = [];
+const W = 400, H = 225;
+Object.entries(STYLES).forEach(([id, s]) => {
+  const [seed, pal] = PICKS[id], a = document.createElement('a');
+  a.className = 'tile'; a.dataset.cat = s.cat;
+  a.href = link('app') + '#' + new URLSearchParams({ seed, s: id, p: palName(pal) }).toString();
+  a.setAttribute('aria-label', `${s.name}: ${s.sub}. Open in the generator`);
+  const c = mk(W, H); a.appendChild(c);
+  a.insertAdjacentHTML('beforeend', `<div class="cap"><b>${s.name}</b><small>${s.sub}</small></div>`);
+  grid.appendChild(a);
+  const st = state(id, seed, pal, W, H);
+  const draw = (t) => present(generate(st, mk, t), c);
+  let anim = 0;
+  const play = () => { if (reduce || anim) return; const s0 = performance.now(); const step = (n) => { draw((((n - s0) / 1000) / 7) % 1); anim = requestAnimationFrame(step); }; anim = requestAnimationFrame(step); };
+  const stop = () => { cancelAnimationFrame(anim); anim = 0; draw(undefined); };
+  a.addEventListener('mouseenter', play); a.addEventListener('mouseleave', stop); a.addEventListener('focus', play); a.addEventListener('blur', stop);
+  tiles.push({ a, draw });
+});
+const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+  if (!e.isIntersecting) return;
+  const t = tiles.find((x) => x.a === e.target); if (t && !t.done) { t.done = true; t.draw(undefined); }
+  io.unobserve(e.target);
+}), { rootMargin: '300px' });
+tiles.forEach((t) => io.observe(t.a));
 
-let raf = 0;
-function scheduleRender() { cancelAnimationFrame(raf); raf = requestAnimationFrame(render); }
-
-/* Recent strip (localStorage is optional — everything works without it) */
-const KEY = 'seedscape.recent.v1';
-const loadRecent = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { return []; } };
-const saveRecent = (l) => { try { localStorage.setItem(KEY, JSON.stringify(l)); } catch (e) { /* ignore */ } };
-function makeThumb() {
-  const c = document.createElement('canvas'); c.width = 224; c.height = 124;
-  const x = c.getContext('2d');
-  const s = Math.max(c.width / out.width, c.height / out.height);
-  const dw = out.width * s, dh = out.height * s;
-  x.drawImage(out, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh);
-  return c.toDataURL('image/jpeg', 0.7);
-}
-function remember() {
-  const hash = stateToParams(state).toString();
-  let list = loadRecent().filter((e) => e.hash !== hash);
-  list.unshift({ hash, thumb: makeThumb() });
-  list = list.slice(0, 18);
-  saveRecent(list);
-  renderRecent(list);
-}
-function renderRecent(list = loadRecent()) {
-  const box = $('recent');
-  box.innerHTML = '';
-  if (!list.length) { box.innerHTML = '<span class="empty">Wallpapers you generate or download will show up here.</span>'; return; }
-  for (const e of list) {
-    const b = document.createElement('button');
-    const p = new URLSearchParams(e.hash);
-    b.title = p.get('seed') + ' · ' + p.get('s');
-    b.innerHTML = `<img alt="" src="${e.thumb}">`;
-    b.addEventListener('click', () => {
-      const st = stateFromParams(p);
-      if (st) { state = st; sync(); render(); }
-    });
-    box.appendChild(b);
-  }
-}
-
-let toastTimer = 0;
-function toast(msg) {
-  const t = $('toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
-}
-function randomize() {
-  state.seed = randomSeed(); sync(); render(); remember();
-}
-function slug(s) { return (s || 'seed').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'seed'; }
-function download() {
-  const still = document.createElement('canvas');
-  present(generate(state, makeCanvas), still);
-  if (!animOn) present(generate(state, makeCanvas), out);
-  still.toBlob((blob) => {
-    if (!blob) { toast('Could not export this size — try a smaller one'); return; }
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `seedscape-${slug(state.seed)}-${state.style}-${still.width}x${still.height}.png`;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    toast('Saved ' + a.download);
-    remember();
-  }, 'image/png');
-}
-async function copyLink() {
-  writeHash();
-  const url = location.href;
-  try { await navigator.clipboard.writeText(url); }
-  catch (e) {
-    const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); } catch (_) { /* ignore */ }
-    ta.remove();
-  }
-  toast('Link copied');
-  remember();
-}
-function fullscreen() {
-  if (document.fullscreenElement) document.exitFullscreen();
-  else if (out.requestFullscreen) out.requestFullscreen();
-}
-
-function bind() {
-  $('seed').addEventListener('input', (e) => { state.seed = e.target.value; scheduleRender(); });
-  $('seed').addEventListener('change', () => { render(); remember(); });
-  $('seed').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
-  $('rand').addEventListener('click', randomize);
-  $('pal').addEventListener('change', (e) => { state.pal = e.target.value; render(); });
-  $('invert').addEventListener('change', (e) => { state.invert = e.target.checked; render(); });
-  $('res').addEventListener('change', (e) => { state.res = e.target.value; sync(); render(); });
-  const dim = () => {
-    state.cw = clamp(parseInt($('cw').value, 10) || 1920, 64, 7680);
-    state.ch = clamp(parseInt($('ch').value, 10) || 1080, 64, 7680);
-    scheduleRender();
-  };
-  $('cw').addEventListener('input', dim); $('ch').addEventListener('input', dim);
-  $('px').addEventListener('input', (e) => { state.px = +e.target.value; sync(); scheduleRender(); });
-  $('blur').addEventListener('input', (e) => { state.blur = +e.target.value; sync(); scheduleRender(); });
-  $('anim').addEventListener('change', (e) => setAnim(e.target.checked));
-  $('dur').addEventListener('input', (e) => { state.dur = +e.target.value; $('durv').textContent = `${state.dur}s`; writeHash(); });
-  $('rec').addEventListener('click', recordLoop);
-  $('live').addEventListener('click', () => window.open('live.html#' + stateToParams(state).toString(), '_blank'));
-  $('grain').addEventListener('change', (e) => { state.grain = e.target.checked; render(); });
-  $('vig').addEventListener('change', (e) => { state.vig = e.target.checked; render(); });
-  $('dl').addEventListener('click', download);
-  $('link').addEventListener('click', copyLink);
-  $('clear').addEventListener('click', () => { saveRecent([]); renderRecent([]); });
-  out.addEventListener('dblclick', fullscreen);
-  window.addEventListener('hashchange', () => {
-    const st = stateFromParams(new URLSearchParams(location.hash.slice(1)));
-    if (st && stateToParams(st).toString() !== stateToParams(state).toString()) { state = st; sync(); if (state.anim && !animOn) startAnim(); else if (!state.anim && animOn) stopAnim(); else render(); }
+[['all', 'All 35'], ...Object.entries(CATEGORIES).map(([id, c]) => [id, `${c.name} (${c.styles.length})`])].forEach(([id, label], i) => {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = label; b.setAttribute('aria-pressed', i === 0);
+  b.addEventListener('click', () => {
+    filters.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', c === b));
+    tiles.forEach(({ a }) => a.classList.toggle('hide', id !== 'all' && a.dataset.cat !== id));
   });
-  window.addEventListener('keydown', (e) => {
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
-    const el = e.target, tag = el.tagName;
-    if (tag === 'SELECT' || tag === 'TEXTAREA' || (tag === 'INPUT' && (el.type === 'text' || el.type === 'number'))) return;
-    const k = e.key.toLowerCase();
-    if (k === 'r' || (k === ' ' && el === document.body)) { e.preventDefault(); randomize(); }
-    else if (k >= '1' && k <= '9' && +k <= STYLE_KEYS.length) { state.style = STYLE_KEYS[+k - 1]; sync(); render(); remember(); }
-    else if (k === '[' || k === ']') {
-      const i = STYLE_KEYS.indexOf(state.style), n = STYLE_KEYS.length;
-      state.style = STYLE_KEYS[(i + (k === ']' ? 1 : -1) + n) % n]; sync(); render(); remember();
-    }
-    else if (k === 'a') setAnim(!state.anim);
-    else if (k === 'd') download();
-    else if (k === 'l') copyLink();
-    else if (k === 'f') fullscreen();
-  });
-}
+  filters.appendChild(b);
+});
 
-buildControls();
-sync();
-bind();
-render();
-renderRecent();
-if (state.anim) startAnim();
-/* Expose a tiny hook for automated tests / tinkering in the console. */
-window.seedscape = { get state() { return state; }, set(patch) { Object.assign(state, patch); sync(); render(); }, STYLES, PALETTES };
+/* ───────── copy buttons ───────── */
+document.querySelectorAll('.copy').forEach((b) => b.addEventListener('click', async () => {
+  const txt = document.getElementById(b.dataset.copy).innerText;
+  try { await navigator.clipboard.writeText(txt); b.textContent = 'Copied'; } catch (e) { b.textContent = 'Press Ctrl+C'; }
+  setTimeout(() => { b.textContent = 'Copy'; }, 1500);
+}));
 })();
 </script>
 </body>

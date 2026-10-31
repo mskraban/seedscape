@@ -3,26 +3,45 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Seedscape Live</title>
-<meta name="description" content="A fullscreen, endlessly looping generative wallpaper. Same seed, same motion.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230e0f13'/%3E%3Crect x='2' y='9' width='4' height='5' fill='%237c5cff'/%3E%3Crect x='6' y='5' width='4' height='9' fill='%23ff5ca8'/%3E%3Crect x='10' y='7' width='4' height='7' fill='%23ffd166'/%3E%3C/svg%3E">
+<title>Seedscape Live: Fullscreen Animated Wallpaper That Never Repeats</title>
+<meta name="description" content="A fullscreen, endlessly looping generative wallpaper. Put it on a second screen, use it as a live wallpaper, or let it pick a new seed every minute. Free and open source.">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#000000">
+<link rel="canonical" href="https://seedscape-azure.vercel.app/live">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Seedscape">
+<meta property="og:title" content="Seedscape Live: an animated wallpaper that never repeats">
+<meta property="og:description" content="Fullscreen, endlessly looping generative wallpaper. New seed every minute if you like.">
+<meta property="og:url" content="https://seedscape-azure.vercel.app/live">
+<meta property="og:image" content="https://seedscape-azure.vercel.app/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://seedscape-azure.vercel.app/og.png">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" href="fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="fonts.css">
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; object-fit: cover; transition: opacity .7s ease; }
   canvas.out { opacity: 0; }
   body.idle { cursor: none; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   #hint {
     position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); padding: 9px 16px; border-radius: 999px;
-    background: rgba(14, 15, 19, .72); color: #e8eaf0; font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: rgba(14, 15, 19, .72); color: #e8eaf0; font: 500 13px/1.4 var(--font-body);
     backdrop-filter: blur(8px); opacity: 0; transition: opacity .4s; pointer-events: none; white-space: nowrap;
   }
   #hint.show { opacity: 1; }
   #hint b { color: #ff9ac2; font-weight: 600; }
-  kbd { background: rgba(255,255,255,.12); border-radius: 4px; padding: 0 5px; font: 12px ui-monospace, Menlo, Consolas, monospace; }
+  kbd { background: rgba(255,255,255,.12); border-radius: 4px; padding: 0 5px; font: 12px var(--font-mono); }
 </style>
 </head>
 <body class="idle">
-<canvas id="c"></canvas>
+<h1 class="sr">Seedscape Live: fullscreen animated wallpaper</h1>
+<canvas id="c" role="img" aria-label="Animated generative wallpaper"></canvas>
+<noscript><p style="color:#ccc;font:16px system-ui;padding:24px">Seedscape Live needs JavaScript to draw its animated wallpaper. <a style="color:#ffb3d9" href="/">Back to Seedscape</a>.</p></noscript>
 <div id="hint" role="status" aria-live="polite"></div>
 <script src="engine.js"></script>
 <script>

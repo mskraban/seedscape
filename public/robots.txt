@@ -1,0 +1,9 @@
+# Seedscape: pages are open to everyone. The image API has an effectively infinite URL space,
+# so crawlers are asked to skip it (the docs page links to examples).
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /w/
+Disallow: /random
+
+Sitemap: https://seedscape-azure.vercel.app/sitemap.xml

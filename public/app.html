@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seedscape Generator: Create Animated Wallpapers from a Seed</title>
+<meta name="description" content="Type any word to create a unique wallpaper in 35 generative styles. Animate it, record a loop, download 4K PNGs or copy the API link. Free and private.">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#08090d">
+<link rel="canonical" href="https://seedscape-azure.vercel.app/app">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Seedscape">
+<meta property="og:title" content="Seedscape Generator: wallpapers from a seed">
+<meta property="og:description" content="35 styles, animation, blur, 4K export and a free API. Runs in your browser.">
+<meta property="og:url" content="https://seedscape-azure.vercel.app/app">
+<meta property="og:image" content="https://seedscape-azure.vercel.app/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://seedscape-azure.vercel.app/og.png">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" href="fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="fonts.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"Seedscape Generator","url":"https://seedscape-azure.vercel.app/app","applicationCategory":"DesignApplication","operatingSystem":"Any (web browser)","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Generate deterministic, animated wallpapers from a seed in 35 styles. Export PNG, record loops, copy API links.","isPartOf":{"@type":"WebSite","name":"Seedscape","url":"https://seedscape-azure.vercel.app/"}}
+</script>
+<style>
+  :root {
+    --bg: #08090d; --panel: #0e1017; --panel2: #151823; --panel3: #1b1f2c; --border: rgba(255,255,255,.09); --border2: rgba(255,255,255,.17);
+    --text: #eceef5; --muted: #9ba3b6; --faint: #6d7588; --accent: #8b6cff; --accent2: #ff5ca8; --accent3: #ffc15c;
+    --grad: linear-gradient(120deg, #8b6cff 0%, #ff5ca8 55%, #ffc15c 100%);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 400 14px/1.5 var(--font-body); font-feature-settings: 'cv11', 'ss01'; -webkit-text-size-adjust: 100%; }
+  .app { display: grid; grid-template-columns: 372px 1fr; height: 100%; }
+  aside { background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+  .side-top { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); font: 700 19px/1 var(--font-display); letter-spacing: -.02em; }
+  .brand svg { width: 28px; height: 28px; }
+  .toplinks { display: flex; gap: 2px; }
+  .toplinks a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 500; padding: 6px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; }
+  .toplinks a:hover { color: var(--text); background: rgba(255,255,255,.07); }
+  .toplinks svg { width: 16px; height: 16px; fill: currentColor; }
+  .scroll { flex: 1; overflow-y: auto; padding: 18px 18px 8px; display: flex; flex-direction: column; gap: 20px; scrollbar-width: thin; scrollbar-color: #2a2f3d transparent; }
+  section { display: flex; flex-direction: column; gap: 9px; }
+  section > label:first-child:not(.check), .lbl { font: 600 11px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .09em; color: var(--faint); display: flex; justify-content: space-between; align-items: center; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .hidden { display: none !important; }
+  input[type=text], input[type=number], select, textarea { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font: 500 14px var(--font-body); outline: none; transition: border-color .15s, box-shadow .15s; }
+  #seed { font: 500 15px var(--font-mono); }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139,108,255,.2); }
+  select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%239ba3b6' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px; }
+  button { background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font: 500 13.5px var(--font-body); cursor: pointer; transition: border-color .15s, background .15s, transform .05s; }
+  button:hover { border-color: var(--border2); background: var(--panel3); }
+  button:active { transform: translateY(1px); }
+  button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.icon { padding: 9px 11px; flex: none; font-size: 16px; line-height: 1; min-width: 42px; }
+  button.primary { background: var(--grad); border: 0; color: #14101f; font-weight: 700; box-shadow: 0 6px 22px -8px rgba(255,92,168,.6); }
+  button.primary:hover { filter: brightness(1.08); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { padding: 5px 11px; border-radius: 999px; font-size: 12px; color: var(--muted); background: transparent; }
+  .chip[aria-pressed='true'] { background: #fff; color: #12101c; border-color: #fff; font-weight: 600; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  #styles { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  #styles button { padding: 8px 4px; font-size: 12.5px; text-align: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #styles button.on { border-color: var(--accent); background: rgba(139,108,255,.18); color: #fff; box-shadow: inset 0 0 0 1px rgba(139,108,255,.5); }
+  .swatch { display: flex; height: 20px; border-radius: 7px; overflow: hidden; border: 1px solid var(--border); }
+  .swatch i { flex: 1; }
+  .check { display: flex; gap: 9px; align-items: center; color: var(--text); cursor: pointer; font-size: 13.5px; text-transform: none; letter-spacing: 0; font-family: var(--font-body); }
+  .checks { flex-direction: row; gap: 20px; }
+  input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  output { color: var(--text); text-transform: none; letter-spacing: 0; font: 500 12.5px var(--font-mono); }
+  label.sub { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; margin-top: 4px; font-family: var(--font-body); text-transform: none; letter-spacing: 0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  button.recording { border-color: #ff5c5c; color: #ffb0b0; }
+  .dock { padding: 14px 18px 16px; border-top: 1px solid var(--border); background: linear-gradient(180deg, transparent, rgba(8,9,13,.5)); display: grid; grid-template-columns: 1.35fr 1fr; gap: 8px; }
+  .dock button { padding: 12px; font-size: 14px; }
+  kbd { background: var(--panel3); border: 1px solid var(--border2); border-bottom-width: 2px; border-radius: 5px; padding: 0 6px; font: 500 11.5px var(--font-mono); color: var(--text); }
+  main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .infobar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 22px; border-bottom: 1px solid var(--border); background: var(--panel); font-size: 13px; color: var(--muted); }
+  .infobar b { color: var(--text); font: 700 15px var(--font-display); letter-spacing: -.01em; }
+  .infobar .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--faint); }
+  .infobar code { font: 500 12.5px var(--font-mono); color: #ffd0e6; background: rgba(255,255,255,.06); border-radius: 6px; padding: 2px 8px; max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .infobar .sp { margin-left: auto; display: flex; gap: 6px; }
+  .infobar button { padding: 5px 10px; font-size: 12.5px; }
+  .stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 26px; background: radial-gradient(circle at 50% 40%, #151826, var(--bg) 72%); }
+  canvas#out { max-width: 100%; max-height: 100%; border-radius: 8px; cursor: zoom-in; box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.08); }
+  canvas#out:fullscreen { width: 100vw; height: 100vh; max-width: none; max-height: none; object-fit: contain; background: #000; border-radius: 0; box-shadow: none; cursor: zoom-out; }
+  .recent { border-top: 1px solid var(--border); background: var(--panel); padding: 10px 18px 12px; }
+  .recent-head { font: 600 11px var(--font-mono); text-transform: uppercase; letter-spacing: .09em; color: var(--faint); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .recent-head button { padding: 0 6px; font-size: 11.5px; background: none; border: 0; color: var(--faint); }
+  .recent-head button:hover { color: var(--text); }
+  .strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; min-height: 62px; scrollbar-width: thin; }
+  .strip .empty { color: var(--faint); font-size: 13px; align-self: center; }
+  .strip button { padding: 0; border-radius: 8px; overflow: hidden; flex: none; width: 110px; height: 62px; border: 1px solid var(--border); }
+  .strip button:hover { border-color: var(--accent); }
+  .strip img { width: 100%; height: 100%; display: block; object-fit: cover; }
+  #toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0; background: #1d2130; border: 1px solid var(--border2); padding: 10px 18px; border-radius: 999px; transition: opacity .2s, transform .2s; pointer-events: none; z-index: 30; font-weight: 500; }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--border2); border-radius: 18px; padding: 0; width: min(640px, calc(100vw - 32px)); box-shadow: 0 40px 120px rgba(0,0,0,.7); }
+  dialog::backdrop { background: rgba(4,5,8,.72); backdrop-filter: blur(4px); }
+  .dlg-head { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; border-bottom: 1px solid var(--border); }
+  .dlg-head h2 { margin: 0; font: 700 20px var(--font-display); letter-spacing: -.02em; }
+  .dlg-body { padding: 18px 22px 22px; display: grid; gap: 14px; max-height: min(70vh, 640px); overflow-y: auto; }
+  .urlrow { display: grid; gap: 6px; }
+  .urlrow .lbl { justify-content: flex-start; gap: 10px; }
+  .urlrow .box { display: flex; gap: 8px; }
+  .urlrow input { font: 500 12.5px var(--font-mono); color: #cfd5e6; text-overflow: ellipsis; }
+  .urlrow button { flex: none; }
+  .hint { color: var(--faint); font-size: 12.5px; }
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; align-items: center; }
+  @media (max-width: 920px) {
+    .app { display: flex; flex-direction: column; height: auto; min-height: 100%; }
+    main { order: -1; position: sticky; top: 0; z-index: 6; background: var(--bg); border-bottom: 1px solid var(--border); }
+    .stage { flex: none; height: 36vh; min-height: 190px; padding: 10px; }
+    .recent { display: none; }
+    .infobar { padding: 8px 12px; gap: 10px; }
+    .infobar .sp, .hide-sm { display: none; }
+    aside { border-right: 0; }
+    .scroll { overflow: visible; }
+    .dock { position: sticky; bottom: 0; z-index: 5; background: var(--panel); }
+  }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1 class="sr">Seedscape wallpaper generator</h1>
+  <aside>
+    <div class="side-top">
+      <a class="brand" href="index.html" title="Seedscape home">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b6cff"/><stop offset=".55" stop-color="#ff5ca8"/><stop offset="1" stop-color="#ffc15c"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="#0b0c11" stroke="rgba(255,255,255,.14)"/><rect x="11" y="33" width="12" height="20" rx="3" fill="url(#lg)"/><rect x="26" y="17" width="12" height="36" rx="3" fill="url(#lg)"/><rect x="41" y="25" width="12" height="28" rx="3" fill="url(#lg)"/></svg>
+        Seedscape
+      </a>
+      <nav class="toplinks" aria-label="Site">
+        <a href="live.html" id="toplive">Live</a>
+        <a href="docs.html">API</a>
+        <a href="https://github.com/mskraban/seedscape" rel="noopener" aria-label="GitHub repository"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+      </nav>
+    </div>
+
+    <div class="scroll">
+      <section>
+        <label for="seed">Seed</label>
+        <div class="row">
+          <input id="seed" type="text" spellcheck="false" autocomplete="off" placeholder="type anything…" maxlength="200">
+          <button id="rand" class="icon" title="New random seed (R)" aria-label="New random seed">🎲</button>
+          <button id="surprise" class="icon" title="Surprise me: random seed, style and palette (X)" aria-label="Surprise me">✨</button>
+        </div>
+      </section>
+
+      <section>
+        <label>Style <output id="stylecount"></output></label>
+        <div id="cats" class="chips" role="group" aria-label="Filter styles by category"></div>
+        <div id="styles" class="grid3"></div>
+      </section>
+
+      <section>
+        <label for="pal">Palette</label>
+        <select id="pal"></select>
+        <div id="swatch" class="swatch"></div>
+        <label class="check"><input type="checkbox" id="invert"> Invert light / dark</label>
+      </section>
+
+      <section>
+        <label for="res">Size</label>
+        <select id="res"></select>
+        <div id="custom" class="row hidden">
+          <input id="cw" type="number" min="64" max="7680" value="1920" aria-label="Width">
+          <span>×</span>
+          <input id="ch" type="number" min="64" max="7680" value="1080" aria-label="Height">
+        </div>
+      </section>
+
+      <section>
+        <label for="px">Pixel size <output id="pxv"></output></label>
+        <input id="px" type="range" min="1" max="16" step="1" value="4">
+      </section>
+
+      <section>
+        <label for="blur">Blur <output id="blurv"></output></label>
+        <input id="blur" type="range" min="0" max="30" step="1" value="0">
+      </section>
+
+      <section>
+        <label for="anim">Animation <output id="animv"></output></label>
+        <label class="check"><input type="checkbox" id="anim"> Animate (seamless loop)</label>
+        <div id="animrow" class="hidden">
+          <label for="dur" class="sub">Loop length <output id="durv"></output></label>
+          <input id="dur" type="range" min="2" max="30" step="1" value="8">
+          <div class="two" style="margin-top:8px">
+            <button id="rec" title="Record one loop as a video">⏺ Record loop</button>
+            <button id="live" title="Open fullscreen live wallpaper">Open live ↗</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="checks">
+        <label class="check"><input type="checkbox" id="grain"> Film grain</label>
+        <label class="check"><input type="checkbox" id="vig"> Vignette</label>
+      </section>
+
+      <p class="hint" style="margin:0 0 8px">Press <kbd>?</kbd> for keyboard shortcuts.</p>
+    </div>
+
+    <div class="dock">
+      <button id="dl" class="primary">Download PNG</button>
+      <button id="share" title="Share link, API URL, embed code (S)">Share &amp; API</button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="infobar" aria-live="polite">
+      <b id="ibStyle">Horizon</b><span class="dot"></span>
+      <code id="ibSeed" title="Current seed"></code>
+      <button id="copyseed" title="Copy seed" aria-label="Copy seed">Copy</button>
+      <span class="dot hide-sm"></span><span id="ibSize" class="hide-sm"></span>
+      <span class="sp"><button id="fsbtn" title="Fullscreen (F)">Fullscreen</button></span>
+    </div>
+    <div class="stage"><canvas id="out" width="1920" height="1080" title="Double-click for fullscreen" aria-label="Generated wallpaper preview"></canvas></div>
+    <div class="recent">
+      <div class="recent-head"><span>Recent</span><button id="clear" title="Clear recent">clear</button></div>
+      <div id="recent" class="strip"></div>
+    </div>
+  </main>
+</div>
+
+<dialog id="sharedlg" aria-labelledby="sharettl">
+  <div class="dlg-head"><h2 id="sharettl">Share &amp; use via API</h2><button id="shareclose" class="icon" aria-label="Close">✕</button></div>
+  <div class="dlg-body" id="sharebody"></div>
+</dialog>
+<dialog id="helpdlg" aria-labelledby="helpttl">
+  <div class="dlg-head"><h2 id="helpttl">Keyboard shortcuts</h2><button id="helpclose" class="icon" aria-label="Close">✕</button></div>
+  <div class="dlg-body"><div class="keys">
+    <span><kbd>R</kbd> <kbd>Space</kbd></span><span>New random seed</span>
+    <span><kbd>X</kbd></span><span>Surprise me (random seed, style, palette)</span>
+    <span><kbd>1</kbd>–<kbd>9</kbd></span><span>Pick one of the first nine styles</span>
+    <span><kbd>[</kbd> <kbd>]</kbd></span><span>Previous / next style</span>
+    <span><kbd>A</kbd></span><span>Toggle animation</span>
+    <span><kbd>D</kbd></span><span>Download full-size PNG</span>
+    <span><kbd>S</kbd></span><span>Share &amp; API panel</span>
+    <span><kbd>L</kbd></span><span>Copy share link</span>
+    <span><kbd>F</kbd></span><span>Fullscreen preview</span>
+    <span><kbd>?</kbd></span><span>This help</span>
+  </div></div>
+</dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="engine.js"></script>
+<script>
+(() => {
+'use strict';
+
+const { STYLES, CATEGORIES, PALETTES, RES, getPalette, getRes, generate, present, randomSeed, helpers } = Seedscape;
+const SITE = 'https://seedscape-azure.vercel.app';
+const { css, clamp } = helpers;
+const STYLE_KEYS = Object.keys(STYLES);
+const makeCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+
+/* ───────────────────────── State ───────────────────────── */
+function defaultState() {
+  return { seed: randomSeed(), style: 'horizon', pal: 'auto', res: '1920x1080', cw: 1920, ch: 1080, px: 4, blur: 0, anim: false, dur: 8, grain: true, vig: true, invert: false };
+}
+function stateToParams(st) {
+  const p = new URLSearchParams();
+  p.set('seed', st.seed); p.set('s', st.style); p.set('p', st.pal); p.set('r', st.res);
+  if (st.res === 'custom') { p.set('cw', st.cw); p.set('ch', st.ch); }
+  p.set('px', st.px); if (st.blur) p.set('b', st.blur); p.set('g', st.grain ? 1 : 0); p.set('v', st.vig ? 1 : 0); p.set('i', st.invert ? 1 : 0);
+  if (st.anim) { p.set('a', 1); p.set('d', st.dur); }
+  return p;
+}
+function stateFromParams(p) {
+  if (!p.has('seed')) return null;
+  const st = defaultState();
+  st.seed = p.get('seed');
+  if (STYLES[p.get('s')]) st.style = p.get('s');
+  const pal = p.get('p'); if (pal === 'auto' || PALETTES[pal]) st.pal = pal;
+  const r = p.get('r'); if (RES.some((x) => x[0] === r)) st.res = r;
+  const num = (k, lo, hi, def) => { const v = parseInt(p.get(k), 10); return Number.isFinite(v) ? clamp(v, lo, hi) : def; };
+  st.cw = num('cw', 64, 7680, st.cw); st.ch = num('ch', 64, 7680, st.ch);
+  st.px = num('px', 1, 16, st.px);
+  st.blur = num('b', 0, 30, 0);
+  st.anim = p.get('a') === '1'; st.dur = num('d', 2, 30, 8);
+  if (p.has('g')) st.grain = p.get('g') === '1';
+  if (p.has('v')) st.vig = p.get('v') === '1';
+  if (p.has('i')) st.invert = p.get('i') === '1';
+  return st;
+}
+
+/* ───────────────────────── UI ───────────────────────── */
+const $ = (id) => document.getElementById(id);
+const out = $('out');
+let state = stateFromParams(new URLSearchParams(location.hash.slice(1))) || defaultState();
+
+function buildControls() {
+  $('styles').innerHTML = '';
+  STYLE_KEYS.forEach((k, i) => {
+    const b = document.createElement('button');
+    b.dataset.style = k;
+    b.textContent = STYLES[k].name; b.dataset.cat = STYLES[k].cat;
+    b.title = `${STYLES[k].name} — ${STYLES[k].sub}` + (i < 9 ? ` (${i + 1})` : '');
+    b.addEventListener('click', () => { state.style = k; sync(); render(); remember(); });
+    $('styles').appendChild(b);
+  });
+  [['all', 'All'], ...Object.entries(CATEGORIES).map(([id, c]) => [id, c.name])].forEach(([id, label], i) => {
+    const c = document.createElement('button'); c.type = 'button'; c.className = 'chip'; c.textContent = label; c.setAttribute('aria-pressed', i === 0);
+    c.addEventListener('click', () => {
+      $('cats').querySelectorAll('.chip').forEach((x) => x.setAttribute('aria-pressed', x === c));
+      let n = 0;
+      $('styles').querySelectorAll('button').forEach((b) => { const show = id === 'all' || b.dataset.cat === id; b.classList.toggle('hidden', !show); n += show; });
+      $('stylecount').textContent = n;
+    });
+    $('cats').appendChild(c);
+  });
+  $('stylecount').textContent = STYLE_KEYS.length;
+  const pal = $('pal');
+  pal.innerHTML = '<option value="auto">Auto — generated from seed</option>' +
+    Object.keys(PALETTES).map((n) => `<option>${n}</option>`).join('');
+  $('res').innerHTML = RES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+}
+function sync() {
+  $('ibStyle').textContent = STYLES[state.style].name; $('ibSeed').textContent = state.seed || '(empty)';
+  { const r = getRes(state); $('ibSize').textContent = `${r.W}×${r.H} · pixel ${state.px <= 1 ? 'smooth' : state.px + '×'}${state.blur ? ' · blur ' + state.blur : ''}`; }
+  $('toplive').href = 'live.html#' + new URLSearchParams({ seed: state.seed, s: state.style, p: state.pal, px: state.px, d: state.dur }).toString();
+  $('seed').value = state.seed;
+  $('pal').value = state.pal;
+  $('invert').checked = state.invert;
+  $('res').value = state.res;
+  $('custom').classList.toggle('hidden', state.res !== 'custom');
+  $('cw').value = state.cw; $('ch').value = state.ch;
+  $('px').value = state.px;
+  $('pxv').textContent = state.px <= 1 ? 'smooth (native)' : `${state.px}×`;
+  $('blur').value = state.blur;
+  $('blurv').textContent = state.blur ? `${state.blur}` : 'off';
+  $('anim').checked = state.anim; $('animrow').classList.toggle('hidden', !state.anim);
+  $('dur').value = state.dur; $('durv').textContent = `${state.dur}s`;
+  if (!state.anim) $('animv').textContent = '';
+  $('grain').checked = state.grain; $('vig').checked = state.vig;
+  document.querySelectorAll('#styles button').forEach((b) => b.classList.toggle('on', b.dataset.style === state.style));
+}
+function updateSwatch() {
+  $('swatch').innerHTML = getPalette(state).map((c) => `<i style="background:${css(c)}"></i>`).join('');
+}
+function writeHash() {
+  try { history.replaceState(null, '', '#' + stateToParams(state).toString()); } catch (e) { /* file:// restrictions */ }
+}
+function render() {
+  if (animOn) { updateSwatch(); writeHash(); return; }
+  const t0 = performance.now();
+  present(generate(state, makeCanvas), out);
+  updateSwatch();
+  writeHash();
+  render.last = performance.now() - t0;
+}
+/* ───────────── Animation: a seamless loop driven by wall-clock time ───────────── */
+let animOn = false, animStart = 0, animRaf = 0, animFrames = 0, animFpsT = 0, animFps = 0;
+function animState() {
+  // Live frames are drawn at most 1280px on the long edge: plenty for the screen and fast enough to stay smooth.
+  const { W, H } = getRes(state), k = Math.min(1, 1280 / Math.max(W, H));
+  return Object.assign({}, state, { res: 'custom', cw: Math.max(64, 2 * Math.round((W * k) / 2)), ch: Math.max(64, 2 * Math.round((H * k) / 2)) });
+}
+function tick(now) {
+  if (!animOn) return;
+  present(generate(animState(), makeCanvas, ((now - animStart) / 1000 / state.dur) % 1), out);
+  animFrames++;
+  if (now - animFpsT > 600) { animFps = Math.round((animFrames * 1000) / (now - animFpsT)); animFrames = 0; animFpsT = now; $('animv').textContent = `${animFps} fps`; }
+  animRaf = requestAnimationFrame(tick);
+}
+function startAnim() {
+  if (animOn) return;
+  animOn = true; animStart = performance.now(); animFpsT = animStart; animFrames = 0;
+  out.style.cursor = 'default'; animRaf = requestAnimationFrame(tick);
+}
+function stopAnim() {
+  animOn = false; cancelAnimationFrame(animRaf); out.style.cursor = ''; render();
+}
+function setAnim(on) { state.anim = on; sync(); on ? (startAnim(), writeHash()) : (stopAnim(), writeHash()); }
+
+let recording = false;
+async function recordLoop() {
+  if (recording) return;
+  if (!window.MediaRecorder || !out.captureStream) { toast('Recording is not supported in this browser'); return; }
+  const wasOn = state.anim;
+  if (!wasOn) setAnim(true);
+  animStart = performance.now();            // restart the clock so the recording begins at the start of the loop
+  const mime = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((t) => MediaRecorder.isTypeSupported(t));
+  const rec = new MediaRecorder(out.captureStream(30), mime ? { mimeType: mime, videoBitsPerSecond: 10000000 } : {});
+  const chunks = [], btn = $('rec'), t0 = performance.now(), ms = state.dur * 1000;
+  rec.ondataavailable = (e) => e.data && e.data.size && chunks.push(e.data);
+  rec.onstop = () => {
+    recording = false; btn.classList.remove('recording'); btn.textContent = '⏺ Record loop';
+    const type = rec.mimeType || 'video/webm', blob = new Blob(chunks, { type }), a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `seedscape-${slug(state.seed)}-${state.style}-loop.${type.includes('mp4') ? 'mp4' : 'webm'}`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast(`Saved ${a.download} (${animFps || '?'} fps)`);
+    if (!wasOn) setAnim(false);
+  };
+  recording = true; btn.classList.add('recording'); rec.start();
+  const iv = setInterval(() => { const left = Math.max(0, Math.ceil((ms - (performance.now() - t0)) / 1000)); btn.textContent = `● Recording… ${left}s`; if (!recording) clearInterval(iv); }, 250);
+  setTimeout(() => rec.state !== 'inactive' && rec.stop(), ms + 80);
+}
+
+let raf = 0;
+function scheduleRender() { cancelAnimationFrame(raf); raf = requestAnimationFrame(render); }
+
+/* Recent strip (localStorage is optional — everything works without it) */
+const KEY = 'seedscape.recent.v1';
+const loadRecent = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { return []; } };
+const saveRecent = (l) => { try { localStorage.setItem(KEY, JSON.stringify(l)); } catch (e) { /* ignore */ } };
+function makeThumb() {
+  const c = document.createElement('canvas'); c.width = 224; c.height = 124;
+  const x = c.getContext('2d');
+  const s = Math.max(c.width / out.width, c.height / out.height);
+  const dw = out.width * s, dh = out.height * s;
+  x.drawImage(out, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh);
+  return c.toDataURL('image/jpeg', 0.7);
+}
+function remember() {
+  const hash = stateToParams(state).toString();
+  let list = loadRecent().filter((e) => e.hash !== hash);
+  list.unshift({ hash, thumb: makeThumb() });
+  list = list.slice(0, 18);
+  saveRecent(list);
+  renderRecent(list);
+}
+function renderRecent(list = loadRecent()) {
+  const box = $('recent');
+  box.innerHTML = '';
+  if (!list.length) { box.innerHTML = '<span class="empty">Wallpapers you generate or download will show up here.</span>'; return; }
+  for (const e of list) {
+    const b = document.createElement('button');
+    const p = new URLSearchParams(e.hash);
+    b.title = p.get('seed') + ' · ' + p.get('s');
+    b.innerHTML = `<img alt="" src="${e.thumb}">`;
+    b.addEventListener('click', () => {
+      const st = stateFromParams(p);
+      if (st) { state = st; sync(); render(); }
+    });
+    box.appendChild(b);
+  }
+}
+
+let toastTimer = 0;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+function randomize() {
+  state.seed = randomSeed(); sync(); render(); remember();
+}
+function slug(s) { return (s || 'seed').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'seed'; }
+function download() {
+  const still = document.createElement('canvas');
+  present(generate(state, makeCanvas), still);
+  if (!animOn) present(generate(state, makeCanvas), out);
+  still.toBlob((blob) => {
+    if (!blob) { toast('Could not export this size — try a smaller one'); return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `seedscape-${slug(state.seed)}-${state.style}-${still.width}x${still.height}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('Saved ' + a.download);
+    remember();
+  }, 'image/png');
+}
+async function copyLink() {
+  writeHash();
+  const url = location.href;
+  try { await navigator.clipboard.writeText(url); }
+  catch (e) {
+    const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (_) { /* ignore */ }
+    ta.remove();
+  }
+  toast('Link copied');
+  remember();
+}
+function fullscreen() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else if (out.requestFullscreen) out.requestFullscreen();
+}
+
+/* ───────────── Surprise, copy, Share & API panel ───────────── */
+function surprise() {
+  const pals = ['auto', ...Object.keys(PALETTES)];
+  state.seed = randomSeed(); state.style = STYLE_KEYS[Math.floor(Math.random() * STYLE_KEYS.length)]; state.pal = pals[Math.floor(Math.random() * pals.length)];
+  sync(); render(); remember();
+}
+async function copyText(txt, msg) {
+  try { await navigator.clipboard.writeText(txt); }
+  catch (e) { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (_) { /* ignore */ } ta.remove(); }
+  toast(msg || 'Copied');
+}
+const apiBase = () => (/^https?:$/.test(location.protocol) ? location.origin : SITE);
+const palSlug = (p) => (p === 'auto' ? 'auto' : p.toLowerCase().replace(/\s+/g, '-'));
+function apiQuery(maxMP, extra = {}) {
+  const { W, H } = getRes(state), k = Math.min(1, 4096 / Math.max(W, H), Math.sqrt((maxMP * 1e6) / (W * H)));
+  const w = Math.max(64, Math.floor(W * k)), hh = Math.max(64, Math.floor(H * k));
+  const q = new URLSearchParams({ seed: state.seed || 'seedscape', style: state.style });
+  if (state.pal !== 'auto') q.set('palette', palSlug(state.pal));
+  q.set('size', `${w}x${hh}`);
+  if (state.px !== 4) q.set('px', state.px);
+  if (state.blur) q.set('blur', state.blur);
+  if (!state.grain && !extra.animate) q.set('grain', 0);
+  if (!state.vig) q.set('vignette', 0);
+  if (state.invert) q.set('invert', 1);
+  for (const [a, b] of Object.entries(extra)) q.set(a, b);
+  return { q, w, h: hh };
+}
+function openShare() {
+  writeHash();
+  const still = apiQuery(8.4), anim = apiQuery(0.5, { animate: 1 });
+  const imgUrl = `${apiBase()}/api/wallpaper?${still.q}`, animUrl = `${apiBase()}/api/wallpaper?${anim.q}`;
+  const live = new URLSearchParams({ seed: state.seed || 'seedscape', s: state.style, p: state.pal, px: state.px, d: state.dur }); if (state.blur) live.set('b', state.blur);
+  const rows = [
+    ['Share link', 'Opens this exact wallpaper in the generator', location.href],
+    ['Image URL', 'PNG from the API. Use it in an <img>, CSS or a README', imgUrl],
+    ['Animated image URL', 'Seamless animated WebP (add &format=gif for GIF)', animUrl],
+    ['Live wallpaper URL', 'Fullscreen, endlessly animated', `${apiBase()}/live#${live}`],
+    ['Markdown', '', `![${STYLES[state.style].name} wallpaper](${imgUrl})`],
+    ['HTML', '', `<img src="${imgUrl}" alt="${STYLES[state.style].name} wallpaper" width="${still.w}" height="${still.h}">`],
+  ];
+  const body = $('sharebody'); body.innerHTML = '';
+  if (/^https?:$/.test(location.protocol)) {
+    const im = document.createElement('img'); im.src = imgUrl.replace(/size=\d+x\d+/, 'size=640x360') ; im.alt = 'Preview from the API'; im.loading = 'lazy';
+    im.style.cssText = 'width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;border:1px solid var(--border);background:#0d0f16'; body.appendChild(im);
+  }
+  rows.forEach(([label, hint, val]) => {
+    const r = document.createElement('div'); r.className = 'urlrow';
+    r.innerHTML = '<div class="lbl"></div><div class="box"><input type="text" readonly><button type="button">Copy</button></div>';
+    r.querySelector('.lbl').textContent = label + (hint ? ' · ' + hint : '');
+    const inp = r.querySelector('input'); inp.value = val; inp.addEventListener('focus', () => inp.select());
+    r.querySelector('button').addEventListener('click', () => copyText(val, label + ' copied'));
+    body.appendChild(r);
+  });
+  const { W, H } = getRes(state);
+  if (W * H > 8.5e6 || Math.max(W, H) > 4096) { const n = document.createElement('p'); n.className = 'hint'; n.textContent = 'The API renders up to 4096 px per side and 8.5 megapixels, so the URLs above use a scaled-down size.'; body.appendChild(n); }
+  $('sharedlg').showModal();
+}
+
+function bind() {
+  $('seed').addEventListener('input', (e) => { state.seed = e.target.value; scheduleRender(); });
+  $('seed').addEventListener('change', () => { render(); remember(); });
+  $('seed').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
+  $('rand').addEventListener('click', randomize);
+  $('surprise').addEventListener('click', surprise);
+  $('share').addEventListener('click', openShare);
+  $('shareclose').addEventListener('click', () => $('sharedlg').close());
+  $('helpclose').addEventListener('click', () => $('helpdlg').close());
+  $('copyseed').addEventListener('click', () => copyText(state.seed, 'Seed copied'));
+  $('fsbtn').addEventListener('click', fullscreen);
+  document.querySelectorAll('dialog').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
+  $('pal').addEventListener('change', (e) => { state.pal = e.target.value; render(); });
+  $('invert').addEventListener('change', (e) => { state.invert = e.target.checked; render(); });
+  $('res').addEventListener('change', (e) => { state.res = e.target.value; sync(); render(); });
+  const dim = () => {
+    state.cw = clamp(parseInt($('cw').value, 10) || 1920, 64, 7680);
+    state.ch = clamp(parseInt($('ch').value, 10) || 1080, 64, 7680);
+    scheduleRender();
+  };
+  $('cw').addEventListener('input', dim); $('ch').addEventListener('input', dim);
+  $('px').addEventListener('input', (e) => { state.px = +e.target.value; sync(); scheduleRender(); });
+  $('blur').addEventListener('input', (e) => { state.blur = +e.target.value; sync(); scheduleRender(); });
+  $('anim').addEventListener('change', (e) => setAnim(e.target.checked));
+  $('dur').addEventListener('input', (e) => { state.dur = +e.target.value; $('durv').textContent = `${state.dur}s`; writeHash(); });
+  $('rec').addEventListener('click', recordLoop);
+  $('live').addEventListener('click', () => window.open('live.html#' + stateToParams(state).toString(), '_blank'));
+  $('grain').addEventListener('change', (e) => { state.grain = e.target.checked; render(); });
+  $('vig').addEventListener('change', (e) => { state.vig = e.target.checked; render(); });
+  $('dl').addEventListener('click', download);
+  $('clear').addEventListener('click', () => { saveRecent([]); renderRecent([]); });
+  out.addEventListener('dblclick', fullscreen);
+  window.addEventListener('hashchange', () => {
+    const st = stateFromParams(new URLSearchParams(location.hash.slice(1)));
+    if (st && stateToParams(st).toString() !== stateToParams(state).toString()) { state = st; sync(); if (state.anim && !animOn) startAnim(); else if (!state.anim && animOn) stopAnim(); else render(); }
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]')) return;
+    const el = e.target, tag = el.tagName;
+    if (tag === 'SELECT' || tag === 'TEXTAREA' || (tag === 'INPUT' && (el.type === 'text' || el.type === 'number'))) return;
+    const k = e.key.toLowerCase();
+    if (k === 'r' || (k === ' ' && el === document.body)) { e.preventDefault(); randomize(); }
+    else if (k >= '1' && k <= '9' && +k <= STYLE_KEYS.length) { state.style = STYLE_KEYS[+k - 1]; sync(); render(); remember(); }
+    else if (k === '[' || k === ']') {
+      const i = STYLE_KEYS.indexOf(state.style), n = STYLE_KEYS.length;
+      state.style = STYLE_KEYS[(i + (k === ']' ? 1 : -1) + n) % n]; sync(); render(); remember();
+    }
+    else if (k === 'a') setAnim(!state.anim);
+    else if (k === 'x') surprise();
+    else if (k === 's') openShare();
+    else if (k === '?') $('helpdlg').showModal();
+    else if (k === 'd') download();
+    else if (k === 'l') copyLink();
+    else if (k === 'f') fullscreen();
+  });
+}
+
+buildControls();
+sync();
+bind();
+render();
+renderRecent();
+if (state.anim) startAnim();
+/* Expose a tiny hook for automated tests / tinkering in the console. */
+window.seedscape = { get state() { return state; }, set(patch) { Object.assign(state, patch); sync(); render(); }, STYLES, PALETTES };
+})();
+</script>
+</body>
+</html>

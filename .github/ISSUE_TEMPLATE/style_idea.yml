@@ -1,0 +1,16 @@
+name: Style or palette idea
+description: Suggest a new wallpaper style, palette or animation
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Describe the look
+      description: References, screenshots and mood are welcome. Bonus points for how it should move.
+    validations: { required: true }
+  - type: checkboxes
+    id: pr
+    attributes:
+      label: Want to build it?
+      options:
+        - label: I'd like to open a pull request (see CONTRIBUTING.md)
