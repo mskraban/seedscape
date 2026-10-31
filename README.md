@@ -26,7 +26,7 @@ No AI. No accounts. No tracking. Just a seed and some math.
 <br>
 
 <p align="center">
-  <img src="docs/gallery.png" alt="Six Seedscape styles" width="92%">
+  <img src="docs/gallery.jpg" alt="Nineteen Seedscape styles" width="92%">
 </p>
 
 ---
@@ -36,7 +36,7 @@ No AI. No accounts. No tracking. Just a seed and some math.
 |  |  |
 |---|---|
 | 🌱 **Reproducible** | The seed fully determines the image. `golden-fox-212` is the same wallpaper on every machine, forever. |
-| 🎨 **6 styles · 12 palettes** | Pixel landscapes, glowing skies, tiled sprites, layered ridges, Bauhaus tiles and cellular-automata fractals, plus a palette generated from your seed. |
+| 🎨 **19 styles · 12 palettes** | Pixel landscapes, glowing skies, isometric cubes, contour maps, nebulae, stained glass, city skylines, spirographs, flow fields, ringed planets and more, plus a palette generated from your seed. |
 | 📐 **Any size** | Desktop, 4K, ultrawide, MacBook, iPhone, Android, square, or custom. |
 | 🕹️ **Pixel-size dial** | From crunchy retro pixels to smooth native resolution; scales with output size so the look stays consistent. |
 | 🔗 **Shareable** | Every setting lives in the URL. Send a link, get the exact same art. |
@@ -45,7 +45,7 @@ No AI. No accounts. No tracking. Just a seed and some math.
 | 🪶 **Tiny** | One drawing engine shared by browser and server, 1 runtime dependency (`@napi-rs/canvas`, API only). |
 
 <p align="center">
-  <img src="docs/app.png" alt="The Seedscape web app" width="92%">
+  <img src="docs/app.jpg" alt="The Seedscape web app" width="92%">
 </p>
 
 ---
@@ -107,7 +107,7 @@ CORS is open (`Access-Control-Allow-Origin: *`), so you can call it from any web
 | Param | Default | Description |
 |-------|---------|-------------|
 | `seed` | *random* | Any text, up to 200 chars. **Omit it for a random image** (not cached). |
-| `style` | `horizon` | `horizon` · `aurora` · `mosaic` · `waves` · `geometric` · `automata` |
+| `style` | `horizon` | One of the 19 [styles](#-styles) below, e.g. `horizon`, `aurora`, `cubes`, `topo`, `planet`. |
 | `palette` | `auto` | `auto` (derived from the seed) or a palette id, see [`/api/styles`](#get-apistyles). |
 | `size` | `1920x1080` | Shorthand `WxH`. Or use `w` and `h` separately. |
 | `w`, `h` | `1920`, `1080` | Width / height in px. Min 64, max 4096, and at most 8.5 megapixels in total. |
@@ -131,7 +131,7 @@ CORS is open (`Access-Control-Allow-Origin: *`), so you can call it from any web
 
 ```jsonc
 // 400
-{ "error": "\"style\" must be one of: horizon, aurora, mosaic, waves, geometric, automata",
+{ "error": "\"style\" must be one of: horizon, aurora, mosaic, waves, geometric, automata, cubes, …",
   "hint": "GET /api/styles lists every valid option." }
 ```
 
@@ -233,14 +233,29 @@ open("hello.png", "wb").write(r.content)
 
 ## 🎨 Styles
 
-| Style | Look |
-|-------|------|
-| 🏔️ **horizon** | Layered pixel-art landscapes with sun or moon, stars, clouds and pines. |
-| 🌌 **aurora** | Soft glowing blobs and thin ribbons of light on a dark sky. |
-| 👾 **mosaic** | A tiled grid of symmetric, space-invader-style sprites. |
-| 🌊 **waves** | Stacked sine ridges under a hazy sun. |
-| 🔷 **geometric** | Bauhaus-style tiles: quarter circles, stripes, rings and diamonds. |
-| 🔺 **automata** | One-dimensional cellular automata (Rule 30, 90, 110…) painting Sierpiński-like fractals. |
+19 styles, all deterministic, all available in the app (keys `1`–`9`, `[` / `]`) and in the API (`style=<id>`).
+
+| `id` | Look |
+|------|------|
+| 🏔️ `horizon` | Layered pixel-art landscapes with sun or moon, stars, clouds and pines. |
+| 🌌 `aurora` | Soft glowing blobs and thin ribbons of light on a dark sky. |
+| 👾 `mosaic` | A tiled grid of symmetric, space-invader-style sprites. |
+| 🌊 `waves` | Stacked sine ridges under a hazy sun. |
+| 🔷 `geometric` | Bauhaus-style tiles: quarter circles, stripes, rings and diamonds. |
+| 🔺 `automata` | One-dimensional cellular automata (Rule 30, 90, 110…) painting Sierpiński-like fractals. |
+| 🧊 `cubes` | Isometric "tumbling blocks" in three shades. |
+| 🗺️ `topo` | Contour-map terrain, either filled bands or glowing lines only. |
+| 🌀 `truchet` | Quarter-arc ribbons that tile into endless winding paths. |
+| ✨ `cosmos` | Nebula clouds and a scatter of stars. |
+| 🪟 `stained` | Voronoi cells with dark lead lines, like stained glass. |
+| ☀️ `rays` | A retro sunburst with a glowing sun. |
+| 🌃 `skyline` | A night city in three depth layers with lit windows and a moon. |
+| 🌸 `spiro` | Layered hypotrochoids with additive glow. |
+| 🌿 `flow` | Thousands of particles tracing a noise field into silky streams. |
+| 🔮 `plasma` | Interfering sine waves, smooth or posterised. |
+| 🌲 `forest` | Rows of pines receding into fog. |
+| 🐝 `hex` | A honeycomb mosaic coloured by a noise field. |
+| 🪐 `planet` | A shaded world with atmosphere, optional ring and starry sky. |
 
 <details>
 <summary><b>🎨 Palettes</b> (click to expand)</summary>
@@ -279,7 +294,7 @@ flowchart LR
 - **One engine, two runtimes.** [`public/engine.js`](public/engine.js) is plain JavaScript on the Canvas 2D API. The browser runs it directly; the API runs the same file in Node with [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas).
 - **Deterministic.** Every random decision comes from the seeded PRNG: never `Math.random()` while drawing. In tests, the browser and API output differ by at most a few colour levels in anti-aliased gradients.
 - **Small grid, crisp upscale.** Styles draw on a low-resolution grid; scaling it up without smoothing creates the pixel-art look. `px=1` skips this and draws at native resolution.
-- **Versioned.** If a change would alter what an existing seed produces, `VERSION` in the engine is bumped (and exposed in `X-Seedscape-Engine`).
+- **Versioned and frozen.** New styles never change old seeds. A test pins the output hashes of existing styles, and if a change would alter what an existing seed produces, `VERSION` in the engine is bumped (and exposed in `X-Seedscape-Engine`).
 
 ### Project layout
 
@@ -306,7 +321,7 @@ seedscape/
 git clone https://github.com/mskraban/seedscape.git
 cd seedscape
 npm install
-npm test            # 13 tests: determinism, validation, API handlers
+npm test            # 15 tests: determinism, frozen seeds, validation, API handlers
 npm run dev         # → http://localhost:3000  (app + API)
 ```
 
@@ -338,11 +353,11 @@ Palettes are just arrays of hex colours in the `PALETTES` object.
 
 ## 🗺️ Roadmap
 
-- [x] Deterministic engine with 6 styles
+- [x] Deterministic engine with 19 styles
 - [x] Web app with shareable links and PNG export
 - [x] Image API (PNG / JPEG / WebP) with immutable caching
 - [ ] Animated export (GIF / WebM)
-- [ ] More styles: isometric cities, topographic lines, stained glass, Truchet tiles
+- [ ] Even more styles: mazes, islands, circuit boards, kaleidoscopes, pixel portraits
 - [ ] Dithering and palette-quantisation options
 - [ ] Batch export of many seeds as a ZIP
 - [ ] Palette from an uploaded image

@@ -418,6 +418,373 @@ function automata(ctx, w, h, rng, pal) {
   ctx.putImageData(img, 0, 0);
 }
 
+/* ───────────────────────── More helpers ───────────────────────── */
+
+/* 2-D value noise with fractal octaves (deterministic, uses the style's rng). */
+function makeNoise2D(rng) {
+  const perm = Array.from({ length: 256 }, (_, i) => i);
+  for (let i = 255; i > 0; i--) { const j = Math.floor(rng.next() * (i + 1)); [perm[i], perm[j]] = [perm[j], perm[i]]; }
+  const P = new Uint8Array(512);
+  for (let i = 0; i < 512; i++) P[i] = perm[i & 255];
+  const vals = new Float32Array(256);
+  for (let i = 0; i < 256; i++) vals[i] = rng.next();
+  const base = (x, y) => {
+    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+    const X = xi & 255, Y = yi & 255;
+    const a = vals[P[P[X] + Y]], b = vals[P[P[X + 1] + Y]], c = vals[P[P[X] + Y + 1]], d = vals[P[P[X + 1] + Y + 1]];
+    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  };
+  return (x, y, oct = 4) => {
+    let s = 0, amp = 1, tot = 0, f = 1;
+    for (let o = 0; o < oct; o++) { s += base(x * f + o * 17.3, y * f + o * 9.1) * amp; tot += amp; amp *= 0.5; f *= 2; }
+    return s / tot;
+  };
+}
+function poly(ctx, pts, color, seam) {
+  ctx.fillStyle = css(color);
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+  ctx.fill();
+  if (seam) { ctx.strokeStyle = css(color); ctx.lineWidth = seam; ctx.stroke(); }
+}
+/* Evaluate fn(x, y) -> [r, g, b] for every pixel and write the result in one go. */
+function pixelField(ctx, w, h, fn) {
+  const img = ctx.createImageData(w, h), d = img.data;
+  let i = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const c = fn(x, y);
+    d[i++] = c[0]; d[i++] = c[1]; d[i++] = c[2]; d[i++] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+function scatterStars(ctx, w, h, rng, color, bg, yMax, density) {
+  const m = Math.min(w, h), u = Math.max(1, Math.round(m / 270));
+  const n = Math.round((w * h) / (density * u * u));
+  for (let i = 0; i < n; i++) {
+    const x = Math.floor(rng.next() * w), y = Math.floor(rng.next() * yMax), b = rng.next();
+    ctx.fillStyle = css(mix(bg, color, 0.25 + 0.75 * b));
+    ctx.fillRect(x, y, u, u);
+    if (b > 0.94) { ctx.fillRect(x - u, y, 3 * u, u); ctx.fillRect(x, y - u, u, 3 * u); }
+  }
+}
+const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+
+/* 7 ─ Cubes: isometric "tumbling blocks" */
+function cubes(ctx, w, h, rng, pal) {
+  const m = Math.min(w, h), s = m / rng.range(4, 8), dx = s * Math.sqrt(3), dy = s * 1.5, hx = dx / 2;
+  ctx.fillStyle = css(colorAt(pal, 0.02));
+  ctx.fillRect(0, 0, w, h);
+  const mono = rng.chance(0.4), baseIdx = rng.range(0.35, 0.85);
+  const light = colorAt(pal, 1), dark = colorAt(pal, 0);
+  const rows = Math.ceil(h / dy) + 2, cols = Math.ceil(w / dx) + 2;
+  for (let r = -1; r <= rows; r++) {
+    for (let c = -1; c <= cols; c++) {
+      const cx = c * dx + (r & 1 ? hx : 0), cy = r * dy;
+      const base = colorAt(pal, mono ? clamp(baseIdx + rng.range(-0.08, 0.08), 0, 1) : rng.range(0.3, 0.95));
+      poly(ctx, [[cx, cy - s], [cx + hx, cy - s / 2], [cx, cy], [cx - hx, cy - s / 2]], mix(base, light, 0.35), 1);
+      poly(ctx, [[cx - hx, cy - s / 2], [cx, cy], [cx, cy + s], [cx - hx, cy + s / 2]], base, 1);
+      poly(ctx, [[cx, cy], [cx + hx, cy - s / 2], [cx + hx, cy + s / 2], [cx, cy + s]], mix(base, dark, 0.5), 1);
+    }
+  }
+}
+
+/* 8 ─ Topo: contour-map terrain, filled or line-only */
+function topo(ctx, w, h, rng, pal) {
+  const m = Math.min(w, h), noise = makeNoise2D(rng);
+  const sc = rng.range(1.6, 3.2), ox = rng.range(0, 50), oy = rng.range(0, 50);
+  const N = rng.int(9, 16), linesOnly = rng.chance(0.45);
+  const bg = colorAt(pal, 0.03), k = Math.max(1, Math.round(m / 540));
+  const band = new Int16Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const t = clamp((noise(ox + (x / m) * sc, oy + (y / m) * sc, 4) - 0.28) / 0.44, 0, 0.999);
+    band[y * w + x] = Math.floor(t * N);
+  }
+  const dark = colorAt(pal, 0), tint = colorAt(pal, 0.12);
+  pixelField(ctx, w, h, (x, y) => {
+    const i = y * w + x, b = band[i], f = b / (N - 1);
+    const edge = (x + k < w && band[i + k] !== b) || (y + k < h && band[i + k * w] !== b);
+    if (linesOnly) return edge ? colorAt(pal, 0.35 + 0.65 * f) : mix(bg, tint, f * 0.6);
+    const base = colorAt(pal, f);
+    return edge ? mix(base, dark, 0.55) : base;
+  });
+}
+
+/* 9 ─ Truchet: quarter-arc ribbons that tile into endless paths */
+function truchet(ctx, w, h, rng, pal) {
+  const m = Math.min(w, h), t = Math.max(6, Math.round(m / rng.int(5, 12)));
+  const bg = colorAt(pal, rng.range(0.02, 0.1));
+  ctx.fillStyle = css(bg); ctx.fillRect(0, 0, w, h);
+  const ca = colorAt(pal, rng.range(0.55, 0.95));
+  const cb = rng.chance(0.5) ? colorAt(pal, rng.range(0.25, 0.5)) : bg;
+  const lw1 = t * rng.range(0.28, 0.42), lw2 = lw1 * rng.range(0.3, 0.5), multi = rng.chance(0.4);
+  const x0 = Math.floor((w % t) / 2) - t, y0 = Math.floor((h % t) / 2) - t, r = t / 2;
+  for (let y = y0; y < h; y += t) {
+    for (let x = x0; x < w; x += t) {
+      const flip = rng.next() < 0.5, col = multi ? colorAt(pal, rng.range(0.4, 1)) : ca;
+      ctx.save(); ctx.translate(x, y);
+      ctx.beginPath();
+      if (!flip) {
+        ctx.moveTo(r, 0); ctx.arc(0, 0, r, 0, Math.PI / 2);
+        ctx.moveTo(r, t); ctx.arc(t, t, r, Math.PI, Math.PI * 1.5);
+      } else {
+        ctx.moveTo(t, r); ctx.arc(t, 0, r, Math.PI / 2, Math.PI);
+        ctx.moveTo(0, r); ctx.arc(0, t, r, -Math.PI / 2, 0);
+      }
+      ctx.lineWidth = lw1; ctx.strokeStyle = css(col); ctx.stroke();
+      ctx.lineWidth = lw2; ctx.strokeStyle = css(cb); ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
+/* 10 ─ Cosmos: nebula clouds and stars */
+function cosmos(ctx, w, h, rng, pal) {
+  const m = Math.min(w, h), n1 = makeNoise2D(rng), n2 = makeNoise2D(rng);
+  const s1 = rng.range(1.2, 2.6), s2 = rng.range(1.5, 3);
+  const o = [rng.range(0, 50), rng.range(0, 50), rng.range(0, 50), rng.range(0, 50)];
+  const bg = colorAt(pal, 0.0), bg2 = colorAt(pal, 0.1);
+  pixelField(ctx, w, h, (x, y) => {
+    const u = x / m, v = y / m;
+    let dens = clamp((n1(o[0] + u * s1, o[1] + v * s1, 5) - 0.38) * 2.6, 0, 1);
+    dens = dens * dens * (3 - 2 * dens);
+    const col = colorAt(pal, 0.3 + 0.7 * n2(o[2] + u * s2, o[3] + v * s2, 4));
+    return mix(mix(bg, bg2, y / h), col, dens * 0.9);
+  });
+  scatterStars(ctx, w, h, rng, colorAt(pal, 1), bg, h, 500);
+}
+
+/* 11 ─ Stained: Voronoi cells with dark lead lines */
+function stained(ctx, w, h, rng, pal) {
+  const m = Math.min(w, h), c = Math.max(8, Math.round(m / rng.int(5, 9)));
+  const gw = Math.ceil(w / c) + 3, gh = Math.ceil(h / c) + 3;
+  const pts = [];
+  for (let gy = 0; gy < gh; gy++) for (let gx = 0; gx < gw; gx++)
+    pts.push({ x: (gx - 1 + rng.range(0.1, 0.9)) * c, y: (gy - 1 + rng.range(0.1, 0.9)) * c, t: rng.next() });
+  const border = Math.max(1, c * 0.07), line = mix(colorAt(pal, 0), colorAt(pal, 0.08), 0.5), light = colorAt(pal, 1);
+  pixelField(ctx, w, h, (x, y) => {
+    const cx = Math.floor(x / c) + 1, cy = Math.floor(y / c) + 1;
+    let d1 = 1e9, d2 = 1e9, p1 = null;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const p = pts[(cy + dy) * gw + (cx + dx)], d = Math.hypot(p.x - x, p.y - y);
+      if (d < d1) { d2 = d1; d1 = d; p1 = p; } else if (d < d2) d2 = d;
+    }
+    if (d2 - d1 < border) return line;
+    return mix(colorAt(pal, 0.2 + 0.8 * p1.t), light, clamp(0.35 * (1 - d1 / c), 0, 0.35));
+  });
+}
+
+/* 12 ─ Rays: retro sunburst */
+function rays(ctx, w, h, rng, pal) {
+  const m = Math.min(w, h), cx = w * rng.range(0.3, 0.7), cy = h * rng.range(0.35, 0.75), R = Math.hypot(w, h);
+  const n = rng.pick([12, 16, 20, 24, 32, 40]), a0 = rng.range(0, Math.PI * 2);
+  const ca = colorAt(pal, rng.range(0.25, 0.45)), cb = colorAt(pal, rng.range(0.5, 0.7));
+  ctx.fillStyle = css(ca); ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = css(cb);
+  for (let i = 0; i < n; i++) {
+    const s = a0 + (i * 2 * Math.PI) / n;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, s, s + Math.PI / n); ctx.closePath(); ctx.fill();
+  }
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.75);
+  g.addColorStop(0, css(colorAt(pal, 1), 0.55));
+  g.addColorStop(0.35, css(colorAt(pal, 0.9), 0.12));
+  g.addColorStop(1, css(colorAt(pal, 0), 0.6));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  const r = m * rng.range(0.09, 0.15), sun = colorAt(pal, rng.range(0.9, 1));
+  for (let k = 3; k >= 1; k--) fillEllipse(ctx, cx, cy, r * (1 + 0.3 * k), r * (1 + 0.3 * k), mix(cb, sun, 0.12 * (4 - k)));
+  fillEllipse(ctx, cx, cy, r, r, sun);
+}
+
+/* 13 ─ Skyline: night city with lit windows */
+function skyline(ctx, w, h, rng, pal) {
+  const m = Math.min(w, h), u = Math.max(1, Math.round(m / 270));
+  const top = colorAt(pal, rng.range(0, 0.1)), bot = colorAt(pal, rng.range(0.45, 0.7));
+  drawBands(ctx, w, h, top, bot, Math.floor(h * 0.85), clamp(Math.round(h / 14), 8, 48));
+  scatterStars(ctx, w, h, rng, colorAt(pal, 1), top, h * 0.45, 900);
+  const mr = Math.round(m * rng.range(0.05, 0.09)), mx = Math.round(w * rng.range(0.15, 0.85)), my = Math.round(h * rng.range(0.15, 0.4));
+  const moon = colorAt(pal, rng.range(0.9, 1));
+  for (let k = 3; k >= 1; k--) fillEllipse(ctx, mx, my, mr * (1 + 0.45 * k), mr * (1 + 0.45 * k), mix(mix(top, bot, my / h), moon, 0.08 * (4 - k)));
+  fillEllipse(ctx, mx, my, mr, mr, moon);
+  const dark = colorAt(pal, 0), winCol = colorAt(pal, rng.range(0.85, 1)), L = 3;
+  for (let l = 0; l < L; l++) {
+    const t = l / (L - 1);
+    const col = mix(mix(bot, dark, 0.45), dark, t);
+    const wcol = mix(col, winCol, l === 1 ? 0.55 : 1);
+    const prob = l === 1 ? 0.3 : 0.4;
+    let x = -rng.int(0, Math.round(m * 0.05));
+    while (x < w) {
+      const bw = Math.max(4, Math.round(m * rng.range(0.05, 0.13) * (0.8 + 0.5 * t)));
+      const bh = Math.round(h * rng.range(0.12, 0.38) * (0.65 + 0.35 * t));
+      const y = h - bh - Math.round((1 - t) * h * 0.04);
+      ctx.fillStyle = css(col); ctx.fillRect(x, y, bw, h - y);
+      if (rng.chance(0.25)) ctx.fillRect(x + (bw >> 1), y - Math.round(bh * 0.18), Math.max(1, u), Math.round(bh * 0.18));
+      if (l > 0) {
+        const sx = Math.max(2 * u, Math.round(bw / 5)), sy = Math.max(3 * u, Math.round(sx * 1.4)), ww = Math.max(u, Math.round(sx * 0.45));
+        for (let yy = y + sy; yy < h - sy; yy += sy) for (let xx = x + sx * 0.6; xx < x + bw - ww; xx += sx) {
+          if (!rng.chance(prob)) continue;
+          ctx.fillStyle = css(wcol); ctx.fillRect(Math.round(xx), yy, ww, Math.max(u, Math.round(ww * 1.2)));
+        }
+      }
+      x += bw + rng.int(0, Math.round(bw * 0.2));
+    }
+  }
+}
+
+/* 14 ─ Spiro: layered hypotrochoids with additive glow */
+function spiro(ctx, w, h, rng, pal) {
+  const m = Math.min(w, h), u = Math.max(1, Math.round(m / 270)), cx = w / 2, cy = h / 2, S = m * 0.5;
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.hypot(w, h) / 2);
+  g.addColorStop(0, css(colorAt(pal, 0.12))); g.addColorStop(1, css(colorAt(pal, 0)));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  ctx.globalCompositeOperation = 'lighter';
+  const R = rng.int(5, 11), r = rng.int(2, R - 1), k = (R - r) / r, loops = r / gcd(R, r);
+  const count = rng.int(36, 90), dphi = rng.range(0.02, 0.09), norm = S / (R - r + r * 1.15);
+  const N = Math.round(loops * 180);
+  ctx.lineWidth = Math.max(1, u * 0.5); ctx.lineJoin = 'round';
+  for (let j = 0; j < count; j++) {
+    const t = j / count, d = r * (0.35 + 0.8 * t), phi = j * dphi, cs = Math.cos(phi), sn = Math.sin(phi);
+    ctx.strokeStyle = css(colorAt(pal, 0.45 + 0.55 * t), 0.22);
+    ctx.beginPath();
+    for (let i = 0; i <= N; i++) {
+      const a = (i / N) * loops * Math.PI * 2;
+      const px = (R - r) * Math.cos(a) + d * Math.cos(k * a), py = (R - r) * Math.sin(a) - d * Math.sin(k * a);
+      const X = cx + (px * cs - py * sn) * norm, Y = cy + (px * sn + py * cs) * norm;
+      i === 0 ? ctx.moveTo(X, Y) : ctx.lineTo(X, Y);
+    }
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+/* 15 ─ Flow: particles tracing a noise field */
+function flow(ctx, w, h, rng, pal) {
+  const m = Math.min(w, h), u = Math.max(1, Math.round(m / 270)), noise = makeNoise2D(rng);
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, css(colorAt(pal, 0))); g.addColorStop(1, css(colorAt(pal, 0.12)));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  const sc = rng.range(1.5, 3.5), ox = rng.range(0, 50), oy = rng.range(0, 50), turn = rng.range(2, 5);
+  ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = Math.max(1, u * 0.7); ctx.lineCap = 'round';
+  const n = Math.round((w * h) / (55 * u * u)), steps = rng.int(30, 70), step = u * 1.1;
+  for (let i = 0; i < n; i++) {
+    let x = rng.next() * w, y = rng.next() * h;
+    ctx.strokeStyle = css(colorAt(pal, 0.3 + 0.7 * noise(ox + (x / m) * sc, oy + (y / m) * sc, 3)), 0.3);
+    ctx.beginPath(); ctx.moveTo(x, y);
+    for (let s = 0; s < steps; s++) {
+      const a = noise(ox + (x / m) * sc, oy + (y / m) * sc, 3) * Math.PI * turn;
+      x += Math.cos(a) * step; y += Math.sin(a) * step;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+/* 16 ─ Plasma: interfering sine waves, smooth or posterised */
+function plasma(ctx, w, h, rng, pal) {
+  const m = Math.min(w, h), f = [0, 1, 2, 3].map(() => (rng.range(2, 6) * Math.PI * 2) / m);
+  const ph = [0, 1, 2, 3].map(() => rng.range(0, Math.PI * 2));
+  const cx = w * rng.range(0.2, 0.8), cy = h * rng.range(0.2, 0.8), q = rng.chance(0.5) ? rng.int(5, 10) : 0;
+  pixelField(ctx, w, h, (x, y) => {
+    const v = Math.sin(x * f[0] + ph[0]) + Math.sin(y * f[1] + ph[1]) + Math.sin((x + y) * f[2] + ph[2]) + Math.sin(Math.hypot(x - cx, y - cy) * f[3] + ph[3]);
+    let t = (v + 4) / 8;
+    if (q) t = Math.floor(t * q) / (q - 1);
+    return colorAt(pal, clamp(t, 0, 1));
+  });
+}
+
+/* 17 ─ Forest: misty rows of pines receding into fog */
+function forest(ctx, w, h, rng, pal) {
+  const m = Math.min(w, h);
+  const top = colorAt(pal, rng.range(0.55, 0.75)), bot = colorAt(pal, rng.range(0.82, 0.98));
+  drawBands(ctx, w, h, top, bot, h, clamp(Math.round(h / 14), 8, 48));
+  if (rng.chance(0.7)) {
+    const sun = colorAt(pal, 1), r = Math.round(m * rng.range(0.06, 0.1));
+    const cx = Math.round(w * rng.range(0.15, 0.85)), cy = Math.round(h * rng.range(0.15, 0.35));
+    for (let k = 3; k >= 1; k--) fillEllipse(ctx, cx, cy, r * (1 + 0.5 * k), r * (1 + 0.5 * k), mix(mix(top, bot, cy / h), sun, 0.1 * (4 - k)));
+    fillEllipse(ctx, cx, cy, r, r, sun);
+  }
+  const dark = colorAt(pal, 0), fog = bot, L = rng.int(5, 7);
+  for (let l = 0; l < L; l++) {
+    const t = L === 1 ? 1 : l / (L - 1), base = lerp(h * 0.42, h * 0.9, t), ts = lerp(m * 0.06, m * 0.2, t);
+    const col = mix(mix(fog, dark, 0.35), dark, Math.pow(t, 0.8));
+    ctx.fillStyle = css(col); ctx.fillRect(0, base + ts * 0.4, w, h);
+    for (let x = -ts; x < w + ts; x += ts * 0.42 * rng.range(0.6, 1.5)) {
+      const sz = ts * rng.range(0.7, 1.25), y = base + rng.range(-0.25, 0.25) * ts;
+      for (let k = 0; k < 3; k++) {
+        const topY = y - sz * (1 - k * 0.3), half = sz * 0.2 * (1 + k * 0.55), baseY = topY + sz * 0.5;
+        poly(ctx, [[x, topY], [x + half, baseY], [x - half, baseY]], col);
+      }
+    }
+    if (l < L - 1) {
+      const fg = ctx.createLinearGradient(0, base - ts * 1.2, 0, base + ts * 1.6);
+      fg.addColorStop(0, css(fog, 0)); fg.addColorStop(0.55, css(fog, 0.5)); fg.addColorStop(1, css(fog, 0));
+      ctx.fillStyle = fg; ctx.fillRect(0, base - ts * 1.2, w, ts * 2.8);
+    }
+  }
+}
+
+/* 18 ─ Hex: honeycomb mosaic coloured by a noise field */
+function hex(ctx, w, h, rng, pal) {
+  const m = Math.min(w, h), s = m / rng.range(6, 13), noise = makeNoise2D(rng);
+  const ox = rng.range(0, 50), oy = rng.range(0, 50), sc = rng.range(1, 2.5), q = rng.int(4, 8);
+  ctx.fillStyle = css(colorAt(pal, 0.02)); ctx.fillRect(0, 0, w, h);
+  const dx = Math.sqrt(3) * s, dy = 1.5 * s, light = colorAt(pal, 1);
+  const hexPts = (cx, cy, r) => Array.from({ length: 6 }, (_, i) => [cx + r * Math.cos(Math.PI / 6 + (i * Math.PI) / 3), cy + r * Math.sin(Math.PI / 6 + (i * Math.PI) / 3)]);
+  for (let row = -1; row * dy < h + s; row++) {
+    for (let col = -1; col * dx < w + dx; col++) {
+      const cx = col * dx + (row & 1 ? dx / 2 : 0), cy = row * dy;
+      const v = noise(ox + (cx / m) * sc, oy + (cy / m) * sc, 3);
+      const tier = Math.floor(clamp((v - 0.25) / 0.5, 0, 0.999) * q) / (q - 1);
+      const base = colorAt(pal, 0.1 + 0.9 * tier);
+      poly(ctx, hexPts(cx, cy, s * 0.94), base);
+      if (rng.chance(0.35)) poly(ctx, hexPts(cx, cy, s * 0.6), mix(base, light, 0.25));
+    }
+  }
+}
+
+/* 19 ─ Planet: shaded world, optional ring, starry sky */
+function planet(ctx, w, h, rng, pal) {
+  const m = Math.min(w, h), noise = makeNoise2D(rng);
+  drawBands(ctx, w, h, colorAt(pal, 0), colorAt(pal, 0.12), h, clamp(Math.round(h / 14), 8, 48));
+  scatterStars(ctx, w, h, rng, colorAt(pal, 1), colorAt(pal, 0.05), h, 650);
+  const R = Math.round(m * rng.range(0.24, 0.38)), cx = Math.round(w * rng.range(0.3, 0.7)), cy = Math.round(h * rng.range(0.42, 0.62));
+  const ring = rng.chance(0.55), tilt = rng.range(-0.5, 0.5), ringCol = colorAt(pal, rng.range(0.55, 0.9));
+  const banded = rng.chance(0.5), bands = rng.range(4, 9), ox = rng.range(0, 50), la = rng.range(0, Math.PI * 2);
+  const lx = Math.cos(la) * 0.8, ly = Math.sin(la) * 0.8, lz = 0.55, ll = Math.hypot(lx, ly, lz);
+  const atmos = colorAt(pal, 0.85), dark = colorAt(pal, 0);
+  const drawRing = (front) => {
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(tilt); ctx.scale(1, 0.26);
+    ctx.lineWidth = R * 0.3; ctx.strokeStyle = css(ringCol, 0.75);
+    ctx.beginPath(); ctx.arc(0, 0, R * 1.7, 0, front ? Math.PI : Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  };
+  if (ring) drawRing(false);
+  const glow = ctx.createRadialGradient(cx, cy, R * 0.9, cx, cy, R * 1.4);
+  glow.addColorStop(0, css(atmos, 0.35)); glow.addColorStop(1, css(atmos, 0));
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, w, h);
+  const bx0 = Math.max(0, cx - R), by0 = Math.max(0, cy - R), bx1 = Math.min(w - 1, cx + R), by1 = Math.min(h - 1, cy + R);
+  const bw = bx1 - bx0 + 1, bh = by1 - by0 + 1;
+  if (bw > 0 && bh > 0) {
+    const img = ctx.getImageData(bx0, by0, bw, bh), d = img.data;
+    for (let y = by0; y <= by1; y++) for (let x = bx0; x <= bx1; x++) {
+      const px = (x - cx) / R, py = (y - cy) / R, r2 = px * px + py * py;
+      if (r2 > 1) continue;
+      const nz = Math.sqrt(1 - r2), lam = Math.max(0, (px * lx + py * ly + nz * lz) / ll);
+      const lon = Math.atan2(px, nz), lat = Math.asin(py);
+      const tex = banded ? noise(ox + lon * 0.8, lat * bands, 4) : noise(ox + lon * 2.2, lat * 2.2, 5);
+      const tcol = colorAt(pal, 0.2 + 0.75 * clamp((tex - 0.25) / 0.5, 0, 1));
+      const shade = 0.08 + 0.92 * Math.pow(lam, 0.9), rim = Math.pow(1 - nz, 3) * 0.3;
+      const c = mix(mix(dark, tcol, shade), atmos, rim);
+      const i = ((y - by0) * bw + (x - bx0)) * 4;
+      d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+    }
+    ctx.putImageData(img, bx0, by0);
+  }
+  if (ring) drawRing(true);
+}
+
 const STYLES = {
   horizon:   { name: 'Horizon',   sub: 'pixel landscape', draw: horizon },
   aurora:    { name: 'Aurora',    sub: 'glowing sky',     draw: aurora },
@@ -425,6 +792,19 @@ const STYLES = {
   waves:     { name: 'Waves',     sub: 'layered ridges',  draw: waves },
   geometric: { name: 'Geometric', sub: 'bauhaus tiles',   draw: geometric },
   automata:  { name: 'Automata',  sub: 'cellular rules',  draw: automata },
+  cubes:     { name: 'Cubes',     sub: 'isometric blocks', draw: cubes },
+  topo:      { name: 'Topo',      sub: 'contour map',     draw: topo },
+  truchet:   { name: 'Truchet',   sub: 'arc ribbons',     draw: truchet },
+  cosmos:    { name: 'Cosmos',    sub: 'nebula & stars',  draw: cosmos },
+  stained:   { name: 'Stained',   sub: 'glass cells',     draw: stained },
+  rays:      { name: 'Rays',      sub: 'retro sunburst',  draw: rays },
+  skyline:   { name: 'Skyline',   sub: 'night city',      draw: skyline },
+  spiro:     { name: 'Spiro',     sub: 'glowing curves',  draw: spiro },
+  flow:      { name: 'Flow',      sub: 'noise streams',   draw: flow },
+  plasma:    { name: 'Plasma',    sub: 'sine interference', draw: plasma },
+  forest:    { name: 'Forest',    sub: 'misty pines',     draw: forest },
+  hex:       { name: 'Hex',       sub: 'honeycomb',       draw: hex },
+  planet:    { name: 'Planet',    sub: 'ringed world',    draw: planet },
 };
 const STYLE_KEYS = Object.keys(STYLES);
 

@@ -57,7 +57,30 @@ test('API renders png / jpeg / webp and enforces limits', async () => {
 
 test('describe() lists styles, palettes and limits', () => {
   const d = describe();
-  assert.equal(d.styles.length, 6);
+  assert.equal(d.styles.length, Object.keys(Seedscape.STYLES).length);
+  assert.ok(d.styles.length >= 19);
   assert.ok(d.palettes.some((p) => p.id === 'game-boy'));
   assert.ok(d.limits.maxDim > 0);
+});
+
+test('every style renders at odd sizes and extreme pixel sizes without throwing', () => {
+  for (const style of styles) {
+    for (const [w, h] of [[64, 64], [100, 400], [333, 177]]) {
+      for (const px of ['1', '16']) {
+        const c = Seedscape.render(Seedscape.normalize({ seed: `edge-${style}`, style, w: String(w), h: String(h), px }), createCanvas);
+        assert.equal(c.width, w);
+        assert.equal(c.height, h);
+      }
+    }
+  }
+});
+
+test('existing seeds keep rendering the same: first six styles are frozen', () => {
+  // Guards the promise "same seed, same art": engine VERSION must be bumped if this ever changes.
+  const crypto = require('node:crypto');
+  const sig = (style) => crypto.createHash('sha1').update(
+    Seedscape.render(Seedscape.normalize({ seed: 'golden-fox-212', style, w: 320, h: 180, palette: 'dusk' }), createCanvas).toBuffer('image/png')
+  ).digest('hex').slice(0, 10);
+  const got = Object.fromEntries(['horizon', 'aurora', 'mosaic', 'waves', 'geometric', 'automata'].map((s) => [s, sig(s)]));
+  assert.deepEqual(got, require('./fixtures/signatures.json'));
 });

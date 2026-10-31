@@ -57,7 +57,7 @@
   }
   button.primary:hover { filter: brightness(1.08); }
   .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  .grid3 button { padding: 8px 4px; font-size: 12.5px; text-align: center; }
+  .grid3 button { padding: 7px 4px; font-size: 12.5px; text-align: center; }
   .grid3 button small { display: block; color: var(--muted); font-size: 10.5px; }
   .grid3 button.on { border-color: var(--accent); background: #211d3d; }
   .swatch { display: flex; height: 18px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
@@ -164,7 +164,7 @@
     </section>
 
     <footer>
-      <kbd>R</kbd> / <kbd>Space</kbd> new seed · <kbd>1</kbd>–<kbd>6</kbd> style<br>
+      <kbd>R</kbd> / <kbd>Space</kbd> new seed · <kbd>1</kbd>–<kbd>9</kbd> style · <kbd>[</kbd> <kbd>]</kbd> prev/next style<br>
       <kbd>D</kbd> download · <kbd>L</kbd> copy link · <kbd>F</kbd> / double-click fullscreen
     </footer>
   </aside>
@@ -227,7 +227,7 @@ function buildControls() {
     const b = document.createElement('button');
     b.dataset.style = k;
     b.innerHTML = `${STYLES[k].name}<small>${STYLES[k].sub}</small>`;
-    b.title = `${STYLES[k].name} (${i + 1})`;
+    b.title = i < 9 ? `${STYLES[k].name} (${i + 1})` : STYLES[k].name;
     b.addEventListener('click', () => { state.style = k; sync(); render(); remember(); });
     $('styles').appendChild(b);
   });
@@ -371,7 +371,11 @@ function bind() {
     if (tag === 'SELECT' || tag === 'TEXTAREA' || (tag === 'INPUT' && (el.type === 'text' || el.type === 'number'))) return;
     const k = e.key.toLowerCase();
     if (k === 'r' || (k === ' ' && el === document.body)) { e.preventDefault(); randomize(); }
-    else if (k >= '1' && k <= String(STYLE_KEYS.length)) { state.style = STYLE_KEYS[+k - 1]; sync(); render(); remember(); }
+    else if (k >= '1' && k <= '9' && +k <= STYLE_KEYS.length) { state.style = STYLE_KEYS[+k - 1]; sync(); render(); remember(); }
+    else if (k === '[' || k === ']') {
+      const i = STYLE_KEYS.indexOf(state.style), n = STYLE_KEYS.length;
+      state.style = STYLE_KEYS[(i + (k === ']' ? 1 : -1) + n) % n]; sync(); render(); remember();
+    }
     else if (k === 'd') download();
     else if (k === 'l') copyLink();
     else if (k === 'f') fullscreen();
