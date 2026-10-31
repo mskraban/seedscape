@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seedscape — generative wallpaper maker</title>
+<meta name="description" content="Type a seed, get a unique wallpaper. Same seed, same art — always. Runs 100% offline in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230e0f13'/%3E%3Crect x='2' y='9' width='4' height='5' fill='%237c5cff'/%3E%3Crect x='6' y='5' width='4' height='9' fill='%23ff5ca8'/%3E%3Crect x='10' y='7' width='4' height='7' fill='%23ffd166'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #0e0f13; --panel: #14161c; --panel2: #1a1d25; --border: #262a35;
+    --text: #e8eaf0; --muted: #8b92a3; --accent: #7c5cff; --accent2: #ff5ca8;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .app { display: grid; grid-template-columns: 340px 1fr; height: 100%; }
+  aside {
+    background: var(--panel); border-right: 1px solid var(--border);
+    padding: 20px 20px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px;
+  }
+  header { display: flex; gap: 12px; align-items: center; }
+  .logo {
+    width: 40px; height: 40px; border-radius: 10px; flex: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: grid; place-items: center; font-size: 20px; color: #fff;
+  }
+  h1 { margin: 0; font-size: 20px; letter-spacing: .2px; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+  section { display: flex; flex-direction: column; gap: 8px; }
+  section > label:first-child:not(.check) {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .hidden { display: none !important; }
+  input[type=text], input[type=number], select {
+    width: 100%; background: var(--panel2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px;
+    font: inherit; outline: none;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus { border-color: var(--accent); }
+  button {
+    background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 12px; font: inherit; cursor: pointer;
+    transition: border-color .15s, background .15s, transform .05s;
+  }
+  button:hover { border-color: #3a4052; background: #20242e; }
+  button:active { transform: translateY(1px); }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button.icon { padding: 9px 11px; flex: none; font-size: 16px; line-height: 1; }
+  button.primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); border: 0; color: #fff; font-weight: 600;
+  }
+  button.primary:hover { filter: brightness(1.08); }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .grid3 button { padding: 8px 4px; font-size: 12.5px; text-align: center; }
+  .grid3 button small { display: block; color: var(--muted); font-size: 10.5px; }
+  .grid3 button.on { border-color: var(--accent); background: #211d3d; }
+  .swatch { display: flex; height: 18px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+  .swatch i { flex: 1; }
+  .check { display: flex; gap: 8px; align-items: center; color: var(--text); cursor: pointer; font-size: 13.5px; text-transform: none; letter-spacing: 0; }
+  .checks { flex-direction: row; gap: 18px; }
+  input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  output { color: var(--text); text-transform: none; letter-spacing: 0; font-size: 12px; }
+  .actions { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; }
+  footer { margin-top: auto; color: var(--muted); font-size: 11.5px; line-height: 1.7; }
+  kbd {
+    background: var(--panel2); border: 1px solid var(--border); border-bottom-width: 2px;
+    border-radius: 4px; padding: 0 5px; font: 11px ui-monospace, Menlo, Consolas, monospace; color: var(--text);
+  }
+  main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .stage {
+    flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 28px;
+    background:
+      radial-gradient(circle at 50% 40%, #171a22, var(--bg) 70%);
+  }
+  canvas#out {
+    max-width: 100%; max-height: 100%; border-radius: 6px; cursor: zoom-in;
+    box-shadow: 0 20px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.06);
+  }
+  canvas#out:fullscreen { width: 100vw; height: 100vh; max-width: none; max-height: none; object-fit: contain; background: #000; border-radius: 0; box-shadow: none; cursor: zoom-out; }
+  .recent { border-top: 1px solid var(--border); background: var(--panel); padding: 10px 16px 12px; }
+  .recent-head { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .recent-head button { padding: 0 6px; font-size: 11px; background: none; border: 0; color: var(--muted); }
+  .recent-head button:hover { color: var(--text); }
+  .strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; min-height: 66px; }
+  .strip .empty { color: var(--muted); font-size: 12.5px; align-self: center; }
+  .strip button { padding: 0; border-radius: 6px; overflow: hidden; flex: none; width: 112px; height: 62px; border: 1px solid var(--border); }
+  .strip button:hover { border-color: var(--accent); }
+  .strip img { width: 100%; height: 100%; display: block; object-fit: cover; }
+  #toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0;
+    background: #20242e; border: 1px solid var(--border); padding: 9px 16px; border-radius: 999px;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 10;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  @media (max-width: 860px) {
+    .app { grid-template-columns: 1fr; height: auto; }
+    aside { border-right: 0; border-bottom: 1px solid var(--border); }
+    .stage { padding: 16px; min-height: 55vh; }
+    footer { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <header>
+      <div class="logo">▦</div>
+      <div>
+        <h1>Seedscape</h1>
+        <p>Type a seed. Get a wallpaper. Same seed, same art — always.</p>
+      </div>
+    </header>
+
+    <section>
+      <label for="seed">Seed</label>
+      <div class="row">
+        <input id="seed" type="text" spellcheck="false" autocomplete="off" placeholder="type anything…">
+        <button id="rand" class="icon" title="Random seed (R)" aria-label="Random seed">🎲</button>
+      </div>
+    </section>
+
+    <section>
+      <label>Style</label>
+      <div id="styles" class="grid3"></div>
+    </section>
+
+    <section>
+      <label for="pal">Palette</label>
+      <select id="pal"></select>
+      <div id="swatch" class="swatch"></div>
+      <label class="check"><input type="checkbox" id="invert"> Invert light / dark</label>
+    </section>
+
+    <section>
+      <label for="res">Size</label>
+      <select id="res"></select>
+      <div id="custom" class="row hidden">
+        <input id="cw" type="number" min="64" max="7680" value="1920" aria-label="Width">
+        <span>×</span>
+        <input id="ch" type="number" min="64" max="7680" value="1080" aria-label="Height">
+      </div>
+    </section>
+
+    <section>
+      <label for="px">Pixel size <output id="pxv"></output></label>
+      <input id="px" type="range" min="1" max="16" step="1" value="4">
+    </section>
+
+    <section class="checks">
+      <label class="check"><input type="checkbox" id="grain"> Film grain</label>
+      <label class="check"><input type="checkbox" id="vig"> Vignette</label>
+    </section>
+
+    <section class="actions">
+      <button id="dl" class="primary">Download PNG</button>
+      <button id="link">Copy link</button>
+    </section>
+
+    <footer>
+      <kbd>R</kbd> / <kbd>Space</kbd> new seed · <kbd>1</kbd>–<kbd>6</kbd> style<br>
+      <kbd>D</kbd> download · <kbd>L</kbd> copy link · <kbd>F</kbd> / double-click fullscreen
+    </footer>
+  </aside>
+
+  <main>
+    <div class="stage"><canvas id="out" width="1920" height="1080" title="Double-click for fullscreen"></canvas></div>
+    <div class="recent">
+      <div class="recent-head"><span>Recent</span><button id="clear" title="Clear recent">clear</button></div>
+      <div id="recent" class="strip"></div>
+    </div>
+  </main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="engine.js"></script>
+<script>
+(() => {
+'use strict';
+
+const { STYLES, PALETTES, RES, getPalette, generate, present, randomSeed, helpers } = Seedscape;
+const { css, clamp } = helpers;
+const STYLE_KEYS = Object.keys(STYLES);
+const makeCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+
+/* ───────────────────────── State ───────────────────────── */
+function defaultState() {
+  return { seed: randomSeed(), style: 'horizon', pal: 'auto', res: '1920x1080', cw: 1920, ch: 1080, px: 4, grain: true, vig: true, invert: false };
+}
+function stateToParams(st) {
+  const p = new URLSearchParams();
+  p.set('seed', st.seed); p.set('s', st.style); p.set('p', st.pal); p.set('r', st.res);
+  if (st.res === 'custom') { p.set('cw', st.cw); p.set('ch', st.ch); }
+  p.set('px', st.px); p.set('g', st.grain ? 1 : 0); p.set('v', st.vig ? 1 : 0); p.set('i', st.invert ? 1 : 0);
+  return p;
+}
+function stateFromParams(p) {
+  if (!p.has('seed')) return null;
+  const st = defaultState();
+  st.seed = p.get('seed');
+  if (STYLES[p.get('s')]) st.style = p.get('s');
+  const pal = p.get('p'); if (pal === 'auto' || PALETTES[pal]) st.pal = pal;
+  const r = p.get('r'); if (RES.some((x) => x[0] === r)) st.res = r;
+  const num = (k, lo, hi, def) => { const v = parseInt(p.get(k), 10); return Number.isFinite(v) ? clamp(v, lo, hi) : def; };
+  st.cw = num('cw', 64, 7680, st.cw); st.ch = num('ch', 64, 7680, st.ch);
+  st.px = num('px', 1, 16, st.px);
+  if (p.has('g')) st.grain = p.get('g') === '1';
+  if (p.has('v')) st.vig = p.get('v') === '1';
+  if (p.has('i')) st.invert = p.get('i') === '1';
+  return st;
+}
+
+/* ───────────────────────── UI ───────────────────────── */
+const $ = (id) => document.getElementById(id);
+const out = $('out');
+let state = stateFromParams(new URLSearchParams(location.hash.slice(1))) || defaultState();
+
+function buildControls() {
+  $('styles').innerHTML = '';
+  STYLE_KEYS.forEach((k, i) => {
+    const b = document.createElement('button');
+    b.dataset.style = k;
+    b.innerHTML = `${STYLES[k].name}<small>${STYLES[k].sub}</small>`;
+    b.title = `${STYLES[k].name} (${i + 1})`;
+    b.addEventListener('click', () => { state.style = k; sync(); render(); remember(); });
+    $('styles').appendChild(b);
+  });
+  const pal = $('pal');
+  pal.innerHTML = '<option value="auto">Auto — generated from seed</option>' +
+    Object.keys(PALETTES).map((n) => `<option>${n}</option>`).join('');
+  $('res').innerHTML = RES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+}
+function sync() {
+  $('seed').value = state.seed;
+  $('pal').value = state.pal;
+  $('invert').checked = state.invert;
+  $('res').value = state.res;
+  $('custom').classList.toggle('hidden', state.res !== 'custom');
+  $('cw').value = state.cw; $('ch').value = state.ch;
+  $('px').value = state.px;
+  $('pxv').textContent = state.px <= 1 ? 'smooth (native)' : `${state.px}×`;
+  $('grain').checked = state.grain; $('vig').checked = state.vig;
+  document.querySelectorAll('#styles button').forEach((b) => b.classList.toggle('on', b.dataset.style === state.style));
+}
+function updateSwatch() {
+  $('swatch').innerHTML = getPalette(state).map((c) => `<i style="background:${css(c)}"></i>`).join('');
+}
+function writeHash() {
+  try { history.replaceState(null, '', '#' + stateToParams(state).toString()); } catch (e) { /* file:// restrictions */ }
+}
+function render() {
+  const t0 = performance.now();
+  present(generate(state, makeCanvas), out);
+  updateSwatch();
+  writeHash();
+  render.last = performance.now() - t0;
+}
+let raf = 0;
+function scheduleRender() { cancelAnimationFrame(raf); raf = requestAnimationFrame(render); }
+
+/* Recent strip (localStorage is optional — everything works without it) */
+const KEY = 'seedscape.recent.v1';
+const loadRecent = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { return []; } };
+const saveRecent = (l) => { try { localStorage.setItem(KEY, JSON.stringify(l)); } catch (e) { /* ignore */ } };
+function makeThumb() {
+  const c = document.createElement('canvas'); c.width = 224; c.height = 124;
+  const x = c.getContext('2d');
+  const s = Math.max(c.width / out.width, c.height / out.height);
+  const dw = out.width * s, dh = out.height * s;
+  x.drawImage(out, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh);
+  return c.toDataURL('image/jpeg', 0.7);
+}
+function remember() {
+  const hash = stateToParams(state).toString();
+  let list = loadRecent().filter((e) => e.hash !== hash);
+  list.unshift({ hash, thumb: makeThumb() });
+  list = list.slice(0, 18);
+  saveRecent(list);
+  renderRecent(list);
+}
+function renderRecent(list = loadRecent()) {
+  const box = $('recent');
+  box.innerHTML = '';
+  if (!list.length) { box.innerHTML = '<span class="empty">Wallpapers you generate or download will show up here.</span>'; return; }
+  for (const e of list) {
+    const b = document.createElement('button');
+    const p = new URLSearchParams(e.hash);
+    b.title = p.get('seed') + ' · ' + p.get('s');
+    b.innerHTML = `<img alt="" src="${e.thumb}">`;
+    b.addEventListener('click', () => {
+      const st = stateFromParams(p);
+      if (st) { state = st; sync(); render(); }
+    });
+    box.appendChild(b);
+  }
+}
+
+let toastTimer = 0;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+function randomize() {
+  state.seed = randomSeed(); sync(); render(); remember();
+}
+function slug(s) { return (s || 'seed').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'seed'; }
+function download() {
+  render();
+  out.toBlob((blob) => {
+    if (!blob) { toast('Could not export this size — try a smaller one'); return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `seedscape-${slug(state.seed)}-${state.style}-${out.width}x${out.height}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('Saved ' + a.download);
+    remember();
+  }, 'image/png');
+}
+async function copyLink() {
+  writeHash();
+  const url = location.href;
+  try { await navigator.clipboard.writeText(url); }
+  catch (e) {
+    const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (_) { /* ignore */ }
+    ta.remove();
+  }
+  toast('Link copied');
+  remember();
+}
+function fullscreen() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else if (out.requestFullscreen) out.requestFullscreen();
+}
+
+function bind() {
+  $('seed').addEventListener('input', (e) => { state.seed = e.target.value; scheduleRender(); });
+  $('seed').addEventListener('change', () => { render(); remember(); });
+  $('seed').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
+  $('rand').addEventListener('click', randomize);
+  $('pal').addEventListener('change', (e) => { state.pal = e.target.value; render(); });
+  $('invert').addEventListener('change', (e) => { state.invert = e.target.checked; render(); });
+  $('res').addEventListener('change', (e) => { state.res = e.target.value; sync(); render(); });
+  const dim = () => {
+    state.cw = clamp(parseInt($('cw').value, 10) || 1920, 64, 7680);
+    state.ch = clamp(parseInt($('ch').value, 10) || 1080, 64, 7680);
+    scheduleRender();
+  };
+  $('cw').addEventListener('input', dim); $('ch').addEventListener('input', dim);
+  $('px').addEventListener('input', (e) => { state.px = +e.target.value; sync(); scheduleRender(); });
+  $('grain').addEventListener('change', (e) => { state.grain = e.target.checked; render(); });
+  $('vig').addEventListener('change', (e) => { state.vig = e.target.checked; render(); });
+  $('dl').addEventListener('click', download);
+  $('link').addEventListener('click', copyLink);
+  $('clear').addEventListener('click', () => { saveRecent([]); renderRecent([]); });
+  out.addEventListener('dblclick', fullscreen);
+  window.addEventListener('hashchange', () => {
+    const st = stateFromParams(new URLSearchParams(location.hash.slice(1)));
+    if (st && stateToParams(st).toString() !== stateToParams(state).toString()) { state = st; sync(); render(); }
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const el = e.target, tag = el.tagName;
+    if (tag === 'SELECT' || tag === 'TEXTAREA' || (tag === 'INPUT' && (el.type === 'text' || el.type === 'number'))) return;
+    const k = e.key.toLowerCase();
+    if (k === 'r' || (k === ' ' && el === document.body)) { e.preventDefault(); randomize(); }
+    else if (k >= '1' && k <= String(STYLE_KEYS.length)) { state.style = STYLE_KEYS[+k - 1]; sync(); render(); remember(); }
+    else if (k === 'd') download();
+    else if (k === 'l') copyLink();
+    else if (k === 'f') fullscreen();
+  });
+}
+
+buildControls();
+sync();
+bind();
+render();
+renderRecent();
+/* Expose a tiny hook for automated tests / tinkering in the console. */
+window.seedscape = { get state() { return state; }, set(patch) { Object.assign(state, patch); sync(); render(); }, STYLES, PALETTES };
+})();
+</script>
+</body>
+</html>
