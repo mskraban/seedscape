@@ -6,7 +6,7 @@
 
 ### Type a seed. Get a wallpaper. Same seed, same art — always.
 
-A zero-install **web app** and a tiny **image API** that paint deterministic, shareable wallpapers.<br>
+A zero-install **web app** and a tiny **image API** that paint deterministic, shareable wallpapers, <b>and make every one of them move</b>.<br>
 No AI. No accounts. No tracking. Just a seed and some math.
 
 [![CI](https://github.com/mskraban/seedscape/actions/workflows/ci.yml/badge.svg)](https://github.com/mskraban/seedscape/actions/workflows/ci.yml)
@@ -17,6 +17,7 @@ No AI. No accounts. No tracking. Just a seed and some math.
 [![Stars](https://img.shields.io/github/stars/mskraban/seedscape?style=flat&color=ffd166)](https://github.com/mskraban/seedscape/stargazers)
 
 **[🎨 Open the app](https://seedscape-azure.vercel.app)** &nbsp;·&nbsp;
+**[🌌 Live wallpaper](https://seedscape-azure.vercel.app/live)** &nbsp;·&nbsp;
 **[⚡ Try the API](#-api)** &nbsp;·&nbsp;
 **[🧩 Add a style](#-add-your-own-style)** &nbsp;·&nbsp;
 **[🚀 Deploy your own](#-deploy-your-own)**
@@ -31,12 +32,20 @@ No AI. No accounts. No tracking. Just a seed and some math.
 
 ---
 
+<p align="center">
+  <img src="docs/animated-gallery.gif" alt="Six styles animating in seamless loops" width="92%"><br>
+  <sub>Every style loops seamlessly. These six are synthwave, planet, kaleidoscope, topo, network and waves.</sub>
+</p>
+
+---
+
 ## ✨ Highlights
 
 |  |  |
 |---|---|
 | 🌱 **Reproducible** | The seed fully determines the image. `golden-fox-212` is the same wallpaper on every machine, forever. |
 | 🎨 **35 styles · 12 palettes** | Pixel landscapes, synthwave suns, mazes, circuit boards, kaleidoscopes, island maps, glitch art, ringed planets and 27 more, plus a palette generated from your seed. |
+| 🎞️ **Animated** | All 35 styles move: grids scroll, planets rotate, nebulae drift, kaleidoscopes turn. Every animation is a **seamless loop**. Watch it live, open it fullscreen as a live wallpaper, record it as MP4/WebM, or fetch animated WebP/GIF from the API. |
 | 📐 **Any size** | Desktop, 4K, ultrawide, MacBook, iPhone, Android, square, or custom. |
 | 🕹️ **Pixel-size dial & blur** | From crunchy retro pixels to smooth native resolution, plus a Gaussian blur slider for dreamy, out-of-focus wallpapers. |
 | 🔗 **Shareable** | Every setting lives in the URL. Send a link, get the exact same art. |
@@ -76,7 +85,7 @@ curl -o wall.png \
  "https://seedscape-azure.vercel.app/api/wallpaper?seed=hello&style=aurora&palette=neon"
 ```
 
-Or drop the URL straight into an `<img>` tag.
+Or drop the URL straight into an `<img>` tag. Add `&animate=1` for an animated loop.
 
 </td>
 </tr>
@@ -93,6 +102,7 @@ Base URL: **`https://seedscape-azure.vercel.app`**
 | `GET` | [`/api/wallpaper`](#get-apiwallpaper) | Render a wallpaper (PNG / JPEG / WebP). |
 | `GET` | `/w/:seed` | Short form of the above: `/w/hello?style=waves`. |
 | `GET` | `/random` | A fresh random wallpaper on every request. |
+| `GET` | [`/live`](#-live-wallpaper) | A fullscreen, endlessly animating wallpaper page. |
 | `GET` | [`/api/random`](#get-apirandom) | A random seed + ready-to-use URLs, as JSON. |
 | `GET` | [`/api/styles`](#get-apistyles) | Every style, palette, size and limit, as JSON. |
 
@@ -113,10 +123,11 @@ CORS is open (`Access-Control-Allow-Origin: *`), so you can call it from any web
 | `w`, `h` | `1920`, `1080` | Width / height in px. Min 64, max 4096, and at most 8.5 megapixels in total. |
 | `px` | `4` | Pixel size `1`–`16`. `1` = smooth, native resolution. |
 | `blur` | `0` | Gaussian blur `0`–`30` (scales with image size). Grain and vignette are applied *after* the blur so they stay crisp. |
+| `animate` | – | `animate=1` returns a seamlessly looping **animated WebP or GIF** instead of a still. See [Animated images](#-animated-images). |
 | `grain` | `1` | Film grain: `1` / `0`. |
 | `vignette` | `1` | Edge darkening: `1` / `0`. |
 | `invert` | `0` | Swap light and dark in the palette. |
-| `format` | `png` | `png` · `jpeg` · `webp` |
+| `format` | `png` | `png` · `jpeg` · `webp` (animated: `webp` · `gif`) |
 | `quality` | `90` | `1`–`100`, for `jpeg` and `webp`. |
 | `download` | – | Add `download=1` to get a `Content-Disposition: attachment` filename. |
 
@@ -161,6 +172,48 @@ Add `?redirect=1` to be redirected straight to the image.
 ### `GET /api/styles`
 
 Machine-readable catalogue: styles, palettes (with their hex colours), sizes, formats, defaults and limits. Handy for building your own picker UI.
+
+### 🎞️ Animated images
+
+Add `animate=1` and the same URL returns a loop. Frame *i* of *N* is drawn at loop time *i ⁄ N*, so the last frame flows straight back into the first.
+
+```
+/api/wallpaper?seed=golden-fox-212&style=synthwave&palette=neon&animate=1
+/api/wallpaper?seed=hello&style=planet&animate=1&frames=36&fps=18&format=gif&size=640x360
+```
+
+| Param | Default | Description |
+|-------|---------|-------------|
+| `animate` | – | `1` to animate. |
+| `frames` | `24` | Number of frames, `4`–`48`. |
+| `fps` | `12` | Playback speed, `1`–`30`. The loop lasts `frames ÷ fps` seconds (default 2 s). |
+| `format` | `webp` | `webp` (small, great quality) or `gif` (works everywhere). |
+| `size` / `w`,`h` | `960x540` | Max 1 megapixel per frame, and `frames × w × h` ≤ 13 megapixels. |
+| `grain` | `0` | Off by default: fresh grain on every frame makes files much bigger. |
+
+All the other parameters (`style`, `palette`, `px`, `blur`, `vignette`, `invert`) work as usual. Responses include `X-Seedscape-Frames` and `X-Seedscape-Fps` headers and are cached forever when a `seed` is given.
+
+> **Why the small limits?** Each frame is a full render, and the API runs on serverless functions with a 1 GB memory and 4.5 MB response ceiling. For longer, bigger or smoother animation use the [live page](#-live-wallpaper) or record a loop in the app, both run on your own GPU/CPU.
+
+### 🌌 Live wallpaper
+
+[`/live`](https://seedscape-azure.vercel.app/live) is a fullscreen page that animates one wallpaper forever. Put it on a second monitor, use it as a browser start page, or feed it to a live-wallpaper tool such as [Lively](https://github.com/rocksdanister/lively) (Windows) as a URL.
+
+```
+https://seedscape-azure.vercel.app/live#seed=golden-fox-212&s=synthwave&p=Neon&d=12
+https://seedscape-azure.vercel.app/live#c=60&shuffle=1        # a new seed and style every minute
+```
+
+| Option | Meaning |
+|--------|---------|
+| `seed`, `s`, `p` | seed, style id, palette (as in the app) |
+| `px`, `b` | pixel size 1–16, blur 0–30 |
+| `d` | loop length in seconds, `2`–`60` (default 12) |
+| `c` | pick a fresh seed every *c* seconds (`0` = never) |
+| `shuffle=1` | with `c`, also pick a random style each time |
+| `ui=0` | never show the on-screen hint |
+
+Keys: `R` / `Space` new wallpaper · `[` `]` previous/next style · `P` pause · `F` fullscreen · `H` hide the hint. It honours your system's *reduce motion* setting by starting paused (add `motion=1` to override).
 
 ### 💡 Use it anywhere
 
@@ -219,6 +272,14 @@ open("hello.png", "wb").write(r.content)
 </details>
 
 <details>
+<summary><b>Animated header for your README</b></summary>
+
+```markdown
+![animated banner](https://seedscape-azure.vercel.app/api/wallpaper?seed=my-project&style=aurora&animate=1&size=1000x300&frames=30&fps=15)
+```
+</details>
+
+<details>
 <summary><b>Phone & desktop wallpapers</b></summary>
 
 | Device | URL |
@@ -229,6 +290,19 @@ open("hello.png", "wb").write(r.content)
 | Android | `/api/wallpaper?seed=hi&size=1080x2400` |
 | Square / avatar | `/api/wallpaper?seed=hi&size=1024x1024` |
 </details>
+
+---
+
+## 🎬 Animating in the app
+
+Tick **Animate** (or press `A`) and the wallpaper starts moving. Everything stays editable while it plays: change the seed, style, palette or blur and the animation follows.
+
+- **Loop length** sets how many seconds one loop takes (2–30 s).
+- **⏺ Record loop** records exactly one loop as an **MP4** (or WebM, depending on your browser) at up to 1280 px, ready to use as a phone live wallpaper or to share. It plays back seamlessly.
+- **Open live ↗** opens the [fullscreen live page](#-live-wallpaper) with your current settings.
+- **Download PNG** always saves a full-size still, even while animating.
+
+Everything runs in your browser; nothing is uploaded.
 
 ---
 
@@ -310,6 +384,7 @@ flowchart LR
 
 - **One engine, two runtimes.** [`public/engine.js`](public/engine.js) is plain JavaScript on the Canvas 2D API. The browser runs it directly; the API runs the same file in Node with [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas).
 - **Deterministic.** Every random decision comes from the seeded PRNG: never `Math.random()` while drawing. In tests, the browser and API output differ by at most a few colour levels in anti-aliased gradients.
+- **Seamless loops by construction.** Each style takes an optional `time` in `[0, 1)`. All motion uses whole numbers of cycles (`sin(k·2πt)`), drifts on circles through noise space, or scrolls by exactly one pattern period, so `t = 1` is *identical* to `t = 0`. A test checks this for every style. Without `time`, a style draws the normal still, byte-for-byte unchanged.
 - **Small grid, crisp upscale.** Styles draw on a low-resolution grid; scaling it up without smoothing creates the pixel-art look. `px=1` skips this and draws at native resolution.
 - **Versioned and frozen.** New styles never change old seeds. A test pins the output hashes of existing styles, and if a change would alter what an existing seed produces, `VERSION` in the engine is bumped (and exposed in `X-Seedscape-Engine`).
 
@@ -319,6 +394,7 @@ flowchart LR
 seedscape/
 ├── public/
 │   ├── index.html        # the web app (static)
+│   ├── live.html         # fullscreen live wallpaper page
 │   └── engine.js         # the drawing engine: browser + Node
 ├── api/
 │   ├── wallpaper.js      # GET /api/wallpaper
@@ -338,7 +414,7 @@ seedscape/
 git clone https://github.com/mskraban/seedscape.git
 cd seedscape
 npm install
-npm test            # 16 tests: determinism, frozen seeds, blur, validation, API handlers
+npm test            # 21 tests: determinism, frozen stills, loops, blur, validation, API
 npm run dev         # → http://localhost:3000  (app + API)
 ```
 
@@ -353,27 +429,30 @@ Or from the CLI: `npm i -g vercel && vercel --prod`. No environment variables ar
 Styles are plain functions. Add one to `public/engine.js` and it shows up in the app **and** the API automatically.
 
 ```js
-function stripes(ctx, w, h, rng, pal) {
+function stripes(ctx, w, h, rng, pal, time) {
   // rng.next() → 0..1 · rng.range(a,b) · rng.int(a,b) · rng.pick(arr) · rng.chance(p)
   // pal is sorted dark → light; colorAt(pal, 0..1) samples it smoothly
-  const n = rng.int(6, 14);
+  const n = rng.int(6, 14), ap = time === undefined ? 0 : time * 2 * Math.PI; // ap: animation phase, 0 → 2π per loop
   for (let i = 0; i < n; i++) {
     ctx.fillStyle = css(colorAt(pal, i / (n - 1)));
-    ctx.fillRect(0, Math.floor((i * h) / n), w, Math.ceil(h / n));
+    const wobble = Math.sin(ap + i) * 3;             // whole cycles per loop ⇒ seamless
+    ctx.fillRect(0, Math.floor((i * h) / n + wobble), w, Math.ceil(h / n));
   }
 }
 // then register it:
 //   STYLES.stripes = { name: 'Stripes', sub: 'bold bands', draw: stripes };
 ```
 
-Palettes are just arrays of hex colours in the `PALETTES` object.
+Palettes are just arrays of hex colours in the `PALETTES` object. The optional `time` argument makes a style animate: it is `undefined` for stills and a number in `[0, 1)` for animation frames. Use whole cycles (`sin(ap + …)`, `sin(2·ap + …)`) so the loop is seamless; `npm test` checks the seam for you.
 
 ## 🗺️ Roadmap
 
 - [x] Deterministic engine with 35 styles and Gaussian blur
 - [x] Web app with shareable links and PNG export
 - [x] Image API (PNG / JPEG / WebP) with immutable caching
-- [ ] Animated export (GIF / WebM)
+- [x] Seamless animation for every style: live, fullscreen page, video recorder, animated API
+- [ ] Audio-reactive mode for the live page
+- [ ] Longer, higher-quality server-side video (MP4) export
 - [ ] Even more styles: pixel portraits, isometric cities, mandalas, topographic 3D, weather
 - [ ] Dithering and palette-quantisation options
 - [ ] Batch export of many seeds as a ZIP

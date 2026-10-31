@@ -17,6 +17,7 @@ http.createServer((req, res) => {
   let p = u.pathname;
   if (p.startsWith('/w/')) { u.searchParams.set('seed', decodeURIComponent(p.slice(3))); p = '/api/wallpaper'; }
   if (p === '/random') p = '/api/wallpaper';
+  if (p === '/live') p = '/live.html';
   if (handlers[p]) {
     req.query = Object.fromEntries(u.searchParams);
     return handlers[p](req, res);

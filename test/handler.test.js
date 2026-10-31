@@ -56,3 +56,14 @@ test('GET /api/random and /api/styles return JSON', () => {
   res = mockRes(); styles({ query: {} }, res);
   assert.ok(JSON.parse(res.body).styles.length >= 35);
 });
+
+test('GET /api/wallpaper?animate=1 returns an animated, cacheable image with frame headers', async () => {
+  const res = mockRes();
+  await wallpaper({ method: 'GET', query: { seed: 'abc', animate: '1', size: '200x120', frames: '4', fps: '10' } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.headers['content-type'], 'image/webp');
+  assert.equal(res.headers['x-seedscape-frames'], '4');
+  assert.equal(res.headers['x-seedscape-fps'], '10');
+  assert.match(res.headers['cache-control'], /immutable/);
+  assert.ok(res.body.includes(Buffer.from('ANIM')), 'webp should contain an ANIM chunk');
+});

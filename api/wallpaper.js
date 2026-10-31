@@ -17,20 +17,23 @@ module.exports = async (req, res) => {
     return res.end('Method Not Allowed');
   }
   try {
-    const { buffer, mime, state, deterministic, format } = await renderFromQuery(req.query);
+    const { buffer, mime, state, deterministic, format, animated, frames, fps } = await renderFromQuery(req.query);
     if (buffer.length > MAX_BODY) {
       res.statusCode = 413;
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       res.setHeader('Cache-Control', 'no-store');
       return res.end(JSON.stringify({
         error: `Rendered image is ${(buffer.length / 1e6).toFixed(1)} MB, above the ${(MAX_BODY / 1e6).toFixed(1)} MB response limit`,
-        hint: 'Use format=webp or format=jpeg, raise px, set grain=0, or request a smaller size.',
+        hint: animated
+          ? 'Use fewer frames, a smaller size, format=webp, or keep grain=0.'
+          : 'Use format=webp or format=jpeg, raise px, set grain=0, or request a smaller size.',
       }));
     }
     res.statusCode = 200;
     res.setHeader('Content-Type', mime);
     res.setHeader('X-Seedscape-Seed', encodeURIComponent(state.seed));
     res.setHeader('X-Seedscape-Engine', '1');
+    if (animated) { res.setHeader('X-Seedscape-Frames', String(frames)); res.setHeader('X-Seedscape-Fps', String(fps)); }
     res.setHeader('Cache-Control', deterministic
       ? 'public, max-age=31536000, s-maxage=31536000, immutable'
       : 'no-store');

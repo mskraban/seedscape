@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seedscape Live</title>
+<meta name="description" content="A fullscreen, endlessly looping generative wallpaper. Same seed, same motion.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230e0f13'/%3E%3Crect x='2' y='9' width='4' height='5' fill='%237c5cff'/%3E%3Crect x='6' y='5' width='4' height='9' fill='%23ff5ca8'/%3E%3Crect x='10' y='7' width='4' height='7' fill='%23ffd166'/%3E%3C/svg%3E">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; object-fit: cover; transition: opacity .7s ease; }
+  canvas.out { opacity: 0; }
+  body.idle { cursor: none; }
+  #hint {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); padding: 9px 16px; border-radius: 999px;
+    background: rgba(14, 15, 19, .72); color: #e8eaf0; font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+    backdrop-filter: blur(8px); opacity: 0; transition: opacity .4s; pointer-events: none; white-space: nowrap;
+  }
+  #hint.show { opacity: 1; }
+  #hint b { color: #ff9ac2; font-weight: 600; }
+  kbd { background: rgba(255,255,255,.12); border-radius: 4px; padding: 0 5px; font: 12px ui-monospace, Menlo, Consolas, monospace; }
+</style>
+</head>
+<body class="idle">
+<canvas id="c"></canvas>
+<div id="hint" role="status" aria-live="polite"></div>
+<script src="engine.js"></script>
+<script>
+(() => {
+'use strict';
+/*
+  Seedscape Live — a fullscreen looping wallpaper.
+  Options go in the URL, either as ?query or #hash:
+    seed=…  s=<style>  p=<palette>  px=1..16  b=0..30 (blur)  d=2..60 (loop seconds)
+    c=<seconds>   pick a fresh seed every N seconds (0 = never)
+    shuffle=1     with c, also pick a random style each time
+    ui=0          never show the hint
+  Keys: R / Space new wallpaper · [ ] style · P pause · F fullscreen · H hide hint
+*/
+const { STYLES, PALETTES, generate, present, randomSeed } = Seedscape;
+const KEYS = Object.keys(STYLES);
+const canvas = document.getElementById('c'), hint = document.getElementById('hint');
+const params = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
+const num = (k, lo, hi, d) => { const v = parseInt(params.get(k), 10); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
+
+const st = {
+  seed: params.get('seed') || randomSeed(),
+  style: STYLES[params.get('s')] ? params.get('s') : 'horizon',
+  pal: params.get('p') === 'auto' || PALETTES[params.get('p')] ? params.get('p') : 'auto',
+  res: 'custom', cw: 1280, ch: 720,
+  px: num('px', 1, 16, 4), blur: num('b', 0, 30, 0),
+  grain: params.get('g') !== '0', vig: params.get('v') !== '0', invert: params.get('i') === '1',
+};
+const dur = num('d', 2, 60, 12), cycle = num('c', 0, 86400, 0), shuffle = params.get('shuffle') === '1', showUi = params.get('ui') !== '0';
+if (!params.has('s') && params.has('seed') === false) st.style = KEYS[Math.floor(Math.random() * KEYS.length)];
+
+const makeCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+function fit() {
+  // Render at screen aspect, at most 1280px on the long edge; CSS scales it up to cover the window.
+  const k = Math.min(1, 1280 / Math.max(innerWidth, innerHeight));
+  st.cw = Math.max(64, 2 * Math.round((innerWidth * k) / 2));
+  st.ch = Math.max(64, 2 * Math.round((innerHeight * k) / 2));
+}
+function writeUrl() {
+  const p = new URLSearchParams({ seed: st.seed, s: st.style, p: st.pal, px: st.px, d: dur });
+  if (st.blur) p.set('b', st.blur);
+  if (cycle) p.set('c', cycle);
+  if (shuffle) p.set('shuffle', 1);
+  try { history.replaceState(null, '', '#' + p.toString()); } catch (e) { /* file:// restrictions */ }
+}
+
+let start = performance.now(), paused = matchMedia('(prefers-reduced-motion: reduce)').matches && params.get('motion') !== '1', pausedAt = 0, hintTimer = 0;
+function say(html, ms = 2600) {
+  if (!showUi) return;
+  hint.innerHTML = html; hint.classList.add('show');
+  clearTimeout(hintTimer); hintTimer = setTimeout(() => hint.classList.remove('show'), ms);
+}
+function frame(now) {
+  const t = ((((paused ? pausedAt : now) - start) / 1000) / dur) % 1;
+  present(generate(st, makeCanvas, t < 0 ? 0 : t), canvas);
+  requestAnimationFrame(frame);
+}
+function next(newStyle) {
+  canvas.classList.add('out');
+  setTimeout(() => {
+    st.seed = randomSeed();
+    if (newStyle) st.style = newStyle === true ? KEYS[Math.floor(Math.random() * KEYS.length)] : newStyle;
+    writeUrl();
+    canvas.classList.remove('out');
+    say(`<b>${STYLES[st.style].name}</b> · ${st.seed}`);
+  }, 450);
+}
+function stepStyle(d) { next(KEYS[(KEYS.indexOf(st.style) + d + KEYS.length) % KEYS.length]); }
+
+addEventListener('resize', fit);
+addEventListener('hashchange', () => location.reload()); // pasting new options into the address bar applies them
+addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === 'r' || k === ' ') { e.preventDefault(); next(shuffle || false); }
+  else if (k === ']') stepStyle(1);
+  else if (k === '[') stepStyle(-1);
+  else if (k === 'p') { paused = !paused; pausedAt = performance.now(); say(paused ? 'Paused' : 'Playing', 1200); }
+  else if (k === 'f') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+  else if (k === 'h') hint.classList.toggle('show');
+});
+canvas.addEventListener('dblclick', () => document.documentElement.requestFullscreen && !document.fullscreenElement && document.documentElement.requestFullscreen());
+let idle = 0;
+addEventListener('mousemove', () => { document.body.classList.remove('idle'); clearTimeout(idle); idle = setTimeout(() => document.body.classList.add('idle'), 2500); });
+
+if (cycle) setInterval(() => next(shuffle), cycle * 1000);
+fit(); writeUrl();
+say(`<b>${STYLES[st.style].name}</b> · ${st.seed} &nbsp; <kbd>R</kbd> new · <kbd>[</kbd> <kbd>]</kbd> style · <kbd>P</kbd> pause · <kbd>F</kbd> fullscreen`, 5000);
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

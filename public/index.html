@@ -71,6 +71,9 @@
   input[type=range] { width: 100%; accent-color: var(--accent); }
   output { color: var(--text); text-transform: none; letter-spacing: 0; font-size: 12px; }
   .actions { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; }
+  .actions.two { grid-template-columns: 1fr 1fr; margin-top: 8px; }
+  label.sub { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; margin-top: 6px; }
+  button.recording { border-color: #ff5c5c; color: #ff9a9a; }
   footer { margin-top: auto; color: var(--muted); font-size: 11.5px; line-height: 1.7; }
   kbd {
     background: var(--panel2); border: 1px solid var(--border); border-bottom-width: 2px;
@@ -161,6 +164,19 @@
       <input id="blur" type="range" min="0" max="30" step="1" value="0">
     </section>
 
+    <section>
+      <label for="anim">Animation <output id="animv"></output></label>
+      <label class="check"><input type="checkbox" id="anim"> Animate (seamless loop)</label>
+      <div id="animrow" class="hidden">
+        <label for="dur" class="sub">Loop length <output id="durv"></output></label>
+        <input id="dur" type="range" min="2" max="30" step="1" value="8">
+        <div class="actions two">
+          <button id="rec" title="Record one loop as a video">⏺ Record loop</button>
+          <button id="live" title="Open fullscreen live wallpaper">Open live ↗</button>
+        </div>
+      </div>
+    </section>
+
     <section class="checks">
       <label class="check"><input type="checkbox" id="grain"> Film grain</label>
       <label class="check"><input type="checkbox" id="vig"> Vignette</label>
@@ -173,7 +189,7 @@
 
     <footer>
       <kbd>R</kbd> / <kbd>Space</kbd> new seed · <kbd>1</kbd>–<kbd>9</kbd> style · <kbd>[</kbd> <kbd>]</kbd> prev/next style<br>
-      <kbd>D</kbd> download · <kbd>L</kbd> copy link · <kbd>F</kbd> / double-click fullscreen
+      <kbd>A</kbd> animate · <kbd>D</kbd> download · <kbd>L</kbd> copy link · <kbd>F</kbd> / double-click fullscreen
     </footer>
   </aside>
 
@@ -192,20 +208,21 @@
 (() => {
 'use strict';
 
-const { STYLES, PALETTES, RES, getPalette, generate, present, randomSeed, helpers } = Seedscape;
+const { STYLES, PALETTES, RES, getPalette, getRes, generate, present, randomSeed, helpers } = Seedscape;
 const { css, clamp } = helpers;
 const STYLE_KEYS = Object.keys(STYLES);
 const makeCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 
 /* ───────────────────────── State ───────────────────────── */
 function defaultState() {
-  return { seed: randomSeed(), style: 'horizon', pal: 'auto', res: '1920x1080', cw: 1920, ch: 1080, px: 4, blur: 0, grain: true, vig: true, invert: false };
+  return { seed: randomSeed(), style: 'horizon', pal: 'auto', res: '1920x1080', cw: 1920, ch: 1080, px: 4, blur: 0, anim: false, dur: 8, grain: true, vig: true, invert: false };
 }
 function stateToParams(st) {
   const p = new URLSearchParams();
   p.set('seed', st.seed); p.set('s', st.style); p.set('p', st.pal); p.set('r', st.res);
   if (st.res === 'custom') { p.set('cw', st.cw); p.set('ch', st.ch); }
   p.set('px', st.px); if (st.blur) p.set('b', st.blur); p.set('g', st.grain ? 1 : 0); p.set('v', st.vig ? 1 : 0); p.set('i', st.invert ? 1 : 0);
+  if (st.anim) { p.set('a', 1); p.set('d', st.dur); }
   return p;
 }
 function stateFromParams(p) {
@@ -219,6 +236,7 @@ function stateFromParams(p) {
   st.cw = num('cw', 64, 7680, st.cw); st.ch = num('ch', 64, 7680, st.ch);
   st.px = num('px', 1, 16, st.px);
   st.blur = num('b', 0, 30, 0);
+  st.anim = p.get('a') === '1'; st.dur = num('d', 2, 30, 8);
   if (p.has('g')) st.grain = p.get('g') === '1';
   if (p.has('v')) st.vig = p.get('v') === '1';
   if (p.has('i')) st.invert = p.get('i') === '1';
@@ -256,6 +274,9 @@ function sync() {
   $('pxv').textContent = state.px <= 1 ? 'smooth (native)' : `${state.px}×`;
   $('blur').value = state.blur;
   $('blurv').textContent = state.blur ? `${state.blur}` : 'off';
+  $('anim').checked = state.anim; $('animrow').classList.toggle('hidden', !state.anim);
+  $('dur').value = state.dur; $('durv').textContent = `${state.dur}s`;
+  if (!state.anim) $('animv').textContent = '';
   $('grain').checked = state.grain; $('vig').checked = state.vig;
   document.querySelectorAll('#styles button').forEach((b) => b.classList.toggle('on', b.dataset.style === state.style));
 }
@@ -266,12 +287,62 @@ function writeHash() {
   try { history.replaceState(null, '', '#' + stateToParams(state).toString()); } catch (e) { /* file:// restrictions */ }
 }
 function render() {
+  if (animOn) { updateSwatch(); writeHash(); return; }
   const t0 = performance.now();
   present(generate(state, makeCanvas), out);
   updateSwatch();
   writeHash();
   render.last = performance.now() - t0;
 }
+/* ───────────── Animation: a seamless loop driven by wall-clock time ───────────── */
+let animOn = false, animStart = 0, animRaf = 0, animFrames = 0, animFpsT = 0, animFps = 0;
+function animState() {
+  // Live frames are drawn at most 1280px on the long edge: plenty for the screen and fast enough to stay smooth.
+  const { W, H } = getRes(state), k = Math.min(1, 1280 / Math.max(W, H));
+  return Object.assign({}, state, { res: 'custom', cw: Math.max(64, 2 * Math.round((W * k) / 2)), ch: Math.max(64, 2 * Math.round((H * k) / 2)) });
+}
+function tick(now) {
+  if (!animOn) return;
+  present(generate(animState(), makeCanvas, ((now - animStart) / 1000 / state.dur) % 1), out);
+  animFrames++;
+  if (now - animFpsT > 600) { animFps = Math.round((animFrames * 1000) / (now - animFpsT)); animFrames = 0; animFpsT = now; $('animv').textContent = `${animFps} fps`; }
+  animRaf = requestAnimationFrame(tick);
+}
+function startAnim() {
+  if (animOn) return;
+  animOn = true; animStart = performance.now(); animFpsT = animStart; animFrames = 0;
+  out.style.cursor = 'default'; animRaf = requestAnimationFrame(tick);
+}
+function stopAnim() {
+  animOn = false; cancelAnimationFrame(animRaf); out.style.cursor = ''; render();
+}
+function setAnim(on) { state.anim = on; sync(); on ? (startAnim(), writeHash()) : (stopAnim(), writeHash()); }
+
+let recording = false;
+async function recordLoop() {
+  if (recording) return;
+  if (!window.MediaRecorder || !out.captureStream) { toast('Recording is not supported in this browser'); return; }
+  const wasOn = state.anim;
+  if (!wasOn) setAnim(true);
+  animStart = performance.now();            // restart the clock so the recording begins at the start of the loop
+  const mime = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((t) => MediaRecorder.isTypeSupported(t));
+  const rec = new MediaRecorder(out.captureStream(30), mime ? { mimeType: mime, videoBitsPerSecond: 10000000 } : {});
+  const chunks = [], btn = $('rec'), t0 = performance.now(), ms = state.dur * 1000;
+  rec.ondataavailable = (e) => e.data && e.data.size && chunks.push(e.data);
+  rec.onstop = () => {
+    recording = false; btn.classList.remove('recording'); btn.textContent = '⏺ Record loop';
+    const type = rec.mimeType || 'video/webm', blob = new Blob(chunks, { type }), a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `seedscape-${slug(state.seed)}-${state.style}-loop.${type.includes('mp4') ? 'mp4' : 'webm'}`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast(`Saved ${a.download} (${animFps || '?'} fps)`);
+    if (!wasOn) setAnim(false);
+  };
+  recording = true; btn.classList.add('recording'); rec.start();
+  const iv = setInterval(() => { const left = Math.max(0, Math.ceil((ms - (performance.now() - t0)) / 1000)); btn.textContent = `● Recording… ${left}s`; if (!recording) clearInterval(iv); }, 250);
+  setTimeout(() => rec.state !== 'inactive' && rec.stop(), ms + 80);
+}
+
 let raf = 0;
 function scheduleRender() { cancelAnimationFrame(raf); raf = requestAnimationFrame(render); }
 
@@ -322,12 +393,14 @@ function randomize() {
 }
 function slug(s) { return (s || 'seed').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'seed'; }
 function download() {
-  render();
-  out.toBlob((blob) => {
+  const still = document.createElement('canvas');
+  present(generate(state, makeCanvas), still);
+  if (!animOn) present(generate(state, makeCanvas), out);
+  still.toBlob((blob) => {
     if (!blob) { toast('Could not export this size — try a smaller one'); return; }
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `seedscape-${slug(state.seed)}-${state.style}-${out.width}x${out.height}.png`;
+    a.download = `seedscape-${slug(state.seed)}-${state.style}-${still.width}x${still.height}.png`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     toast('Saved ' + a.download);
@@ -367,6 +440,10 @@ function bind() {
   $('cw').addEventListener('input', dim); $('ch').addEventListener('input', dim);
   $('px').addEventListener('input', (e) => { state.px = +e.target.value; sync(); scheduleRender(); });
   $('blur').addEventListener('input', (e) => { state.blur = +e.target.value; sync(); scheduleRender(); });
+  $('anim').addEventListener('change', (e) => setAnim(e.target.checked));
+  $('dur').addEventListener('input', (e) => { state.dur = +e.target.value; $('durv').textContent = `${state.dur}s`; writeHash(); });
+  $('rec').addEventListener('click', recordLoop);
+  $('live').addEventListener('click', () => window.open('live.html#' + stateToParams(state).toString(), '_blank'));
   $('grain').addEventListener('change', (e) => { state.grain = e.target.checked; render(); });
   $('vig').addEventListener('change', (e) => { state.vig = e.target.checked; render(); });
   $('dl').addEventListener('click', download);
@@ -375,7 +452,7 @@ function bind() {
   out.addEventListener('dblclick', fullscreen);
   window.addEventListener('hashchange', () => {
     const st = stateFromParams(new URLSearchParams(location.hash.slice(1)));
-    if (st && stateToParams(st).toString() !== stateToParams(state).toString()) { state = st; sync(); render(); }
+    if (st && stateToParams(st).toString() !== stateToParams(state).toString()) { state = st; sync(); if (state.anim && !animOn) startAnim(); else if (!state.anim && animOn) stopAnim(); else render(); }
   });
   window.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -388,6 +465,7 @@ function bind() {
       const i = STYLE_KEYS.indexOf(state.style), n = STYLE_KEYS.length;
       state.style = STYLE_KEYS[(i + (k === ']' ? 1 : -1) + n) % n]; sync(); render(); remember();
     }
+    else if (k === 'a') setAnim(!state.anim);
     else if (k === 'd') download();
     else if (k === 'l') copyLink();
     else if (k === 'f') fullscreen();
@@ -399,6 +477,7 @@ sync();
 bind();
 render();
 renderRecent();
+if (state.anim) startAnim();
 /* Expose a tiny hook for automated tests / tinkering in the console. */
 window.seedscape = { get state() { return state; }, set(patch) { Object.assign(state, patch); sync(); render(); }, STYLES, PALETTES };
 })();

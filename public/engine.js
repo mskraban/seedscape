@@ -12,6 +12,15 @@
 
 const VERSION = 1;
 
+/* Animation helpers. Every style takes an optional `time` in [0,1): one seamless loop.
+   With time === undefined a style draws its normal still image, byte-for-byte unchanged. */
+const TAU = Math.PI * 2;
+/* Oscillator that is exactly 0 at the start of the loop and repeats k times per loop. */
+const osc = (ap, k, d) => Math.sin(k * ap + d) - Math.sin(d);
+const hash01 = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+const triW = (v) => 1 - Math.abs(2 * (v - Math.floor(v)) - 1);
+const GRAIN_FRAMES = 64;
+
 /* ───────────────────────── Seeded randomness ───────────────────────── */
 function xmur3(str) {
   let h = 1779033703 ^ str.length;
@@ -157,21 +166,23 @@ function makeNoise1D(rng, octaves) {
 /* ───────────────────────── Styles ───────────────────────── */
 
 /* 1 ─ Horizon: layered pixel-art landscape with sun / moon, stars, pines */
-function horizon(ctx, w, h, rng, pal) {
+function horizon(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), u = Math.max(1, Math.round(m / 270));
   const horizonY = Math.floor(h * rng.range(0.52, 0.7));
   const night = rng.chance(0.6);
   const top = colorAt(pal, night ? rng.range(0, 0.12) : rng.range(0.3, 0.5));
   const bot = colorAt(pal, night ? rng.range(0.45, 0.7) : rng.range(0.7, 0.9));
   const skyAt = (y) => mix(top, bot, clamp(y / horizonY, 0, 1));
-  drawBands(ctx, w, h, top, bot, Math.min(h, horizonY + Math.floor(h * 0.08)), clamp(Math.round(h / 14), 8, 48));
+  const br = A ? 0.07 * osc(ap, 1, 0.6) : 0, lightC = colorAt(pal, 1);
+  drawBands(ctx, w, h, A ? mix(top, lightC, br) : top, A ? mix(bot, lightC, br) : bot, Math.min(h, horizonY + Math.floor(h * 0.08)), clamp(Math.round(h / 14), 8, 48));
 
   if (night) {
     const starCol = colorAt(pal, 1);
     const n = Math.round((w * h) / (700 * u * u));
     for (let i = 0; i < n; i++) {
       const x = Math.floor(rng.next() * w), y = Math.floor(rng.next() * horizonY * 0.85), b = rng.next();
-      ctx.fillStyle = css(mix(skyAt(y), starCol, 0.35 + 0.65 * b));
+      ctx.fillStyle = css(mix(skyAt(y), starCol, clamp((0.35 + 0.65 * b) * (1 + (A ? 0.5 * osc(ap, 1 + (i % 3), i * 1.7) : 0)), 0, 1)));
       ctx.fillRect(x, y, u, u);
       if (b > 0.93) { ctx.fillRect(x - u, y, 3 * u, u); ctx.fillRect(x, y - u, u, 3 * u); }
     }
@@ -185,7 +196,7 @@ function horizon(ctx, w, h, rng, pal) {
   const steps = 4;
   for (let k = steps; k >= 1; k--) {
     const rr = Math.round(r * (1 + 0.4 * k));
-    fillEllipse(ctx, cx, cy, rr, rr, mix(skyAt(cy), sunCol, 0.07 * (steps + 1 - k)));
+    fillEllipse(ctx, cx, cy, rr, rr, mix(skyAt(cy), sunCol, 0.07 * (steps + 1 - k) * (1 + (A ? 0.25 * Math.sin(ap) : 0))));
   }
   const striped = rng.chance(0.3);
   ctx.fillStyle = css(sunCol);
@@ -198,7 +209,8 @@ function horizon(ctx, w, h, rng, pal) {
   // clouds
   const nClouds = rng.int(0, 3);
   for (let i = 0; i < nClouds; i++) {
-    const ccx = w * rng.range(0.05, 0.95), ccy = horizonY * rng.range(0.15, 0.6), cw = m * rng.range(0.12, 0.28);
+    const ccx0 = w * rng.range(0.05, 0.95), ccy = horizonY * rng.range(0.15, 0.6), cw = m * rng.range(0.12, 0.28);
+    const cP = w + 2 * cw, ccx = A ? ((ccx0 + cw + (ap / TAU) * cP) % cP) - cw : ccx0;
     const col = mix(skyAt(ccy), colorAt(pal, 0.85), 0.28);
     fillEllipse(ctx, ccx, ccy, cw * 0.5, cw * 0.08, col);
     fillEllipse(ctx, ccx - cw * 0.18, ccy - cw * 0.04, cw * 0.25, cw * 0.07, col);
@@ -221,7 +233,7 @@ function horizon(ctx, w, h, rng, pal) {
     const ridge = new Int32Array(w);
     ctx.fillStyle = css(col);
     for (let x = 0; x < w; x++) {
-      const y = Math.floor(base - amp * (noise(offs + (x / w) * cycles) * 1.4 - 0.35));
+      const y = Math.floor(base - amp * (noise(offs + (x / w) * cycles + (A ? 0.06 * (1 + 2 * t) * Math.sin(ap) : 0)) * 1.4 - 0.35));
       ridge[x] = y;
       ctx.fillRect(x, y, 1, h - y);
     }
@@ -244,7 +256,8 @@ function horizon(ctx, w, h, rng, pal) {
 }
 
 /* 2 ─ Aurora: soft glowing blobs on a dark sky */
-function aurora(ctx, w, h, rng, pal) {
+function aurora(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h);
   const g = ctx.createLinearGradient(0, 0, 0, h);
   g.addColorStop(0, css(colorAt(pal, 0.0)));
@@ -255,8 +268,9 @@ function aurora(ctx, w, h, rng, pal) {
   const n = rng.int(6, 10);
   for (let i = 0; i < n; i++) {
     const x = w * rng.range(-0.1, 1.1), y = h * rng.range(-0.1, 1.1), r = m * rng.range(0.3, 0.85);
+    const bdx = A ? m * 0.07 * osc(ap, 1, i * 2.1) : 0, bdy = A ? m * 0.07 * osc(ap, 1, i * 2.1 + 1.3) : 0;
     const col = colorAt(pal, rng.range(0.3, 1));
-    const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
+    const rg = ctx.createRadialGradient(x + bdx, y + bdy, 0, x + bdx, y + bdy, r);
     rg.addColorStop(0, css(col, rng.range(0.35, 0.7)));
     rg.addColorStop(0.5, css(col, 0.14));
     rg.addColorStop(1, css(col, 0));
@@ -273,7 +287,7 @@ function aurora(ctx, w, h, rng, pal) {
     ctx.strokeStyle = css(col, 0.22);
     ctx.beginPath();
     for (let x = 0; x <= w; x += Math.max(1, w / 120)) {
-      const y = y0 + Math.sin((x / w) * Math.PI * 2 * f + ph) * a1;
+      const y = y0 + Math.sin((x / w) * Math.PI * 2 * f + ph + ap * (i % 2 ? 1 : -1)) * a1;
       x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     }
     ctx.stroke();
@@ -282,7 +296,8 @@ function aurora(ctx, w, h, rng, pal) {
 }
 
 /* 3 ─ Mosaic: tiled symmetric space-invader sprites */
-function mosaic(ctx, w, h, rng, pal) {
+function mosaic(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h);
   const bg = colorAt(pal, 0.04);
   ctx.fillStyle = css(bg);
@@ -302,7 +317,8 @@ function mosaic(ctx, w, h, rng, pal) {
         ctx.fillRect(x, y, tile, tile);
       }
       if (rng.chance(0.12)) continue;
-      const col = colorAt(pal, rng.range(0.35, 1));
+      const col0 = colorAt(pal, rng.range(0.35, 1));
+      const col = A ? mix(col0, colorAt(pal, 1), 0.22 * Math.max(0, osc(ap, 1, (tx + ty) * 0.5))) : col0;
       ctx.fillStyle = css(col);
       const pad = dot >> 1;
       for (let sy = 0; sy < S; sy++) {
@@ -317,7 +333,8 @@ function mosaic(ctx, w, h, rng, pal) {
 }
 
 /* 4 ─ Waves: stacked sine ridges with a hazy sun */
-function waves(ctx, w, h, rng, pal) {
+function waves(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h);
   const top = colorAt(pal, rng.range(0.02, 0.12)), bot = colorAt(pal, rng.range(0.55, 0.8));
   drawBands(ctx, w, h, top, bot, h, clamp(Math.round(h / 12), 8, 56));
@@ -336,7 +353,7 @@ function waves(ctx, w, h, rng, pal) {
     ctx.fillStyle = css(colorAt(pal, lerp(0.78, 0.0, t)));
     for (let x = 0; x < w; x++) {
       let y = base;
-      for (const wv of waves) y += Math.sin(x * wv.f + wv.p) * amp * wv.a;
+      for (let wi = 0; wi < 3; wi++) { const wv = waves[wi]; y += Math.sin(x * wv.f + wv.p + ap * (wi + 1) * (l % 2 ? 1 : -1)) * amp * wv.a; }
       y = Math.floor(y);
       ctx.fillRect(x, y, 1, h - y);
     }
@@ -344,7 +361,8 @@ function waves(ctx, w, h, rng, pal) {
 }
 
 /* 5 ─ Geometric: Bauhaus-style tiles */
-function geometric(ctx, w, h, rng, pal) {
+function geometric(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h);
   const t = Math.max(4, Math.round(m / rng.int(3, 7)));
   const x0 = Math.floor((w % t) / 2) - t, y0 = Math.floor((h % t) / 2) - t;
@@ -357,8 +375,9 @@ function geometric(ctx, w, h, rng, pal) {
       ctx.fillStyle = css(bg);
       ctx.fillRect(x, y, t, t);
       ctx.save();
+      if (A) { ctx.beginPath(); ctx.rect(x, y, t, t); ctx.clip(); }
       ctx.translate(x + t / 2, y + t / 2);
-      ctx.rotate(rng.int(0, 3) * Math.PI / 2);
+      ctx.rotate(rng.int(0, 3) * Math.PI / 2 + (A ? ap * (((Math.round((x - x0) / t) + Math.round((y - y0) / t)) & 1) ? 1 : -1) : 0));
       const a = t / 2;
       ctx.fillStyle = css(fg);
       switch (rng.int(0, 7)) {
@@ -383,7 +402,8 @@ function geometric(ctx, w, h, rng, pal) {
 }
 
 /* 6 ─ Automata: 1-D cellular automata, one generation per row */
-function automata(ctx, w, h, rng, pal) {
+function automata(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const cs = rng.pick([1, 1, 2, 3]);
   const cols = Math.ceil(w / cs), rows = Math.ceil(h / cs);
   const rule = rng.pick([30, 90, 110, 18, 22, 54, 126, 150, 60, 102, 45, 105]);
@@ -404,7 +424,7 @@ function automata(ctx, w, h, rng, pal) {
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       if (cur[c]) {
-        const col = colorAt(pal, 0.35 + 0.65 * tri((c / cols) * freq + (r / rows) * 0.6));
+        const col = colorAt(pal, 0.35 + 0.65 * tri((c / cols) * freq + (r / rows) * 0.6 + ap / TAU));
         for (let dy = 0; dy < cs; dy++) for (let dx = 0; dx < cs; dx++) {
           const x = c * cs + dx, y = r * cs + dy;
           if (x >= w || y >= h) continue;
@@ -460,12 +480,12 @@ function pixelField(ctx, w, h, fn) {
   }
   ctx.putImageData(img, 0, 0);
 }
-function scatterStars(ctx, w, h, rng, color, bg, yMax, density) {
+function scatterStars(ctx, w, h, rng, color, bg, yMax, density, ap = 0) {
   const m = Math.min(w, h), u = Math.max(1, Math.round(m / 270));
   const n = Math.round((w * h) / (density * u * u));
   for (let i = 0; i < n; i++) {
     const x = Math.floor(rng.next() * w), y = Math.floor(rng.next() * yMax), b = rng.next();
-    ctx.fillStyle = css(mix(bg, color, 0.25 + 0.75 * b));
+    ctx.fillStyle = css(mix(bg, color, clamp((0.25 + 0.75 * b) * (1 + 0.5 * osc(ap, 1 + (i % 3), i * 1.7)), 0, 1)));
     ctx.fillRect(x, y, u, u);
     if (b > 0.94) { ctx.fillRect(x - u, y, 3 * u, u); ctx.fillRect(x, y - u, u, 3 * u); }
   }
@@ -473,7 +493,8 @@ function scatterStars(ctx, w, h, rng, color, bg, yMax, density) {
 const gcd = (a, b) => (b ? gcd(b, a % b) : a);
 
 /* 7 ─ Cubes: isometric "tumbling blocks" */
-function cubes(ctx, w, h, rng, pal) {
+function cubes(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), s = m / rng.range(4, 8), dx = s * Math.sqrt(3), dy = s * 1.5, hx = dx / 2;
   ctx.fillStyle = css(colorAt(pal, 0.02));
   ctx.fillRect(0, 0, w, h);
@@ -484,22 +505,24 @@ function cubes(ctx, w, h, rng, pal) {
     for (let c = -1; c <= cols; c++) {
       const cx = c * dx + (r & 1 ? hx : 0), cy = r * dy;
       const base = colorAt(pal, mono ? clamp(baseIdx + rng.range(-0.08, 0.08), 0, 1) : rng.range(0.3, 0.95));
-      poly(ctx, [[cx, cy - s], [cx + hx, cy - s / 2], [cx, cy], [cx - hx, cy - s / 2]], mix(base, light, 0.35), 1);
+      poly(ctx, [[cx, cy - s], [cx + hx, cy - s / 2], [cx, cy], [cx - hx, cy - s / 2]], mix(base, light, 0.35 + (A ? 0.22 * Math.sin(ap + (r + c) * 0.7) : 0)), 1);
       poly(ctx, [[cx - hx, cy - s / 2], [cx, cy], [cx, cy + s], [cx - hx, cy + s / 2]], base, 1);
-      poly(ctx, [[cx, cy], [cx + hx, cy - s / 2], [cx + hx, cy + s / 2], [cx, cy + s]], mix(base, dark, 0.5), 1);
+      poly(ctx, [[cx, cy], [cx + hx, cy - s / 2], [cx + hx, cy + s / 2], [cx, cy + s]], mix(base, dark, 0.5 - (A ? 0.15 * Math.sin(ap + (r + c) * 0.7 + 1) : 0)), 1);
     }
   }
 }
 
 /* 8 ─ Topo: contour-map terrain, filled or line-only */
-function topo(ctx, w, h, rng, pal) {
+function topo(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), noise = makeNoise2D(rng);
   const sc = rng.range(1.6, 3.2), ox = rng.range(0, 50), oy = rng.range(0, 50);
+  const oxa = ox + (A ? 0.35 * (Math.cos(ap) - 1) : 0), oya = oy + (A ? 0.35 * Math.sin(ap) : 0);
   const N = rng.int(9, 16), linesOnly = rng.chance(0.45);
   const bg = colorAt(pal, 0.03), k = Math.max(1, Math.round(m / 540));
   const band = new Int16Array(w * h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const t = clamp((noise(ox + (x / m) * sc, oy + (y / m) * sc, 4) - 0.28) / 0.44, 0, 0.999);
+    const t = clamp((noise(oxa + (x / m) * sc, oya + (y / m) * sc, 4) - 0.28) / 0.44, 0, 0.999);
     band[y * w + x] = Math.floor(t * N);
   }
   const dark = colorAt(pal, 0), tint = colorAt(pal, 0.12);
@@ -513,7 +536,8 @@ function topo(ctx, w, h, rng, pal) {
 }
 
 /* 9 ─ Truchet: quarter-arc ribbons that tile into endless paths */
-function truchet(ctx, w, h, rng, pal) {
+function truchet(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), t = Math.max(6, Math.round(m / rng.int(5, 12)));
   const bg = colorAt(pal, rng.range(0.02, 0.1));
   ctx.fillStyle = css(bg); ctx.fillRect(0, 0, w, h);
@@ -523,7 +547,8 @@ function truchet(ctx, w, h, rng, pal) {
   const x0 = Math.floor((w % t) / 2) - t, y0 = Math.floor((h % t) / 2) - t, r = t / 2;
   for (let y = y0; y < h; y += t) {
     for (let x = x0; x < w; x += t) {
-      const flip = rng.next() < 0.5, col = multi ? colorAt(pal, rng.range(0.4, 1)) : ca;
+      const flip = rng.next() < 0.5, col0 = multi ? colorAt(pal, rng.range(0.4, 1)) : ca;
+      const col = A ? colorAt(pal, 0.4 + 0.6 * triW((x + y) / (m * 1.3) - ap / TAU)) : col0;
       ctx.save(); ctx.translate(x, y);
       ctx.beginPath();
       if (!flip) {
@@ -541,23 +566,26 @@ function truchet(ctx, w, h, rng, pal) {
 }
 
 /* 10 ─ Cosmos: nebula clouds and stars */
-function cosmos(ctx, w, h, rng, pal) {
+function cosmos(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), n1 = makeNoise2D(rng), n2 = makeNoise2D(rng);
   const s1 = rng.range(1.2, 2.6), s2 = rng.range(1.5, 3);
   const o = [rng.range(0, 50), rng.range(0, 50), rng.range(0, 50), rng.range(0, 50)];
   const bg = colorAt(pal, 0.0), bg2 = colorAt(pal, 0.1);
+  const cdx = A ? 0.3 * (Math.cos(ap) - 1) : 0, cdy = A ? 0.3 * Math.sin(ap) : 0;
   pixelField(ctx, w, h, (x, y) => {
     const u = x / m, v = y / m;
-    let dens = clamp((n1(o[0] + u * s1, o[1] + v * s1, 5) - 0.38) * 2.6, 0, 1);
+    let dens = clamp((n1(o[0] + u * s1 + cdx, o[1] + v * s1 + cdy, 5) - 0.38) * 2.6, 0, 1);
     dens = dens * dens * (3 - 2 * dens);
-    const col = colorAt(pal, 0.3 + 0.7 * n2(o[2] + u * s2, o[3] + v * s2, 4));
+    const col = colorAt(pal, 0.3 + 0.7 * n2(o[2] + u * s2 - cdy * 0.7, o[3] + v * s2 + cdx * 0.7, 4));
     return mix(mix(bg, bg2, y / h), col, dens * 0.9);
   });
-  scatterStars(ctx, w, h, rng, colorAt(pal, 1), bg, h, 500);
+  scatterStars(ctx, w, h, rng, colorAt(pal, 1), bg, h, 500, ap);
 }
 
 /* 11 ─ Stained: Voronoi cells with dark lead lines */
-function stained(ctx, w, h, rng, pal) {
+function stained(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), c = Math.max(8, Math.round(m / rng.int(5, 9)));
   const gw = Math.ceil(w / c) + 3, gh = Math.ceil(h / c) + 3;
   const pts = [];
@@ -572,19 +600,20 @@ function stained(ctx, w, h, rng, pal) {
       if (d < d1) { d2 = d1; d1 = d; p1 = p; } else if (d < d2) d2 = d;
     }
     if (d2 - d1 < border) return line;
-    return mix(colorAt(pal, 0.2 + 0.8 * p1.t), light, clamp(0.35 * (1 - d1 / c), 0, 0.35));
+    return mix(colorAt(pal, 0.2 + 0.8 * p1.t), light, clamp(0.35 * (1 - d1 / c) * (A ? 0.75 + 0.45 * Math.sin(ap + p1.t * TAU) : 1), 0, 0.5));
   });
 }
 
 /* 12 ─ Rays: retro sunburst */
-function rays(ctx, w, h, rng, pal) {
+function rays(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), cx = w * rng.range(0.3, 0.7), cy = h * rng.range(0.35, 0.75), R = Math.hypot(w, h);
   const n = rng.pick([12, 16, 20, 24, 32, 40]), a0 = rng.range(0, Math.PI * 2);
   const ca = colorAt(pal, rng.range(0.25, 0.45)), cb = colorAt(pal, rng.range(0.5, 0.7));
   ctx.fillStyle = css(ca); ctx.fillRect(0, 0, w, h);
   ctx.fillStyle = css(cb);
   for (let i = 0; i < n; i++) {
-    const s = a0 + (i * 2 * Math.PI) / n;
+    const s = a0 + (i * 2 * Math.PI) / n + ap / n;
     ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, s, s + Math.PI / n); ctx.closePath(); ctx.fill();
   }
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.75);
@@ -592,22 +621,25 @@ function rays(ctx, w, h, rng, pal) {
   g.addColorStop(0.35, css(colorAt(pal, 0.9), 0.12));
   g.addColorStop(1, css(colorAt(pal, 0), 0.6));
   ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-  const r = m * rng.range(0.09, 0.15), sun = colorAt(pal, rng.range(0.9, 1));
+  const r = m * rng.range(0.09, 0.15) * (1 + (A ? 0.05 * Math.sin(ap) : 0)), sun = colorAt(pal, rng.range(0.9, 1));
   for (let k = 3; k >= 1; k--) fillEllipse(ctx, cx, cy, r * (1 + 0.3 * k), r * (1 + 0.3 * k), mix(cb, sun, 0.12 * (4 - k)));
   fillEllipse(ctx, cx, cy, r, r, sun);
 }
 
 /* 13 ─ Skyline: night city with lit windows */
-function skyline(ctx, w, h, rng, pal) {
+function skyline(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), u = Math.max(1, Math.round(m / 270));
   const top = colorAt(pal, rng.range(0, 0.1)), bot = colorAt(pal, rng.range(0.45, 0.7));
-  drawBands(ctx, w, h, top, bot, Math.floor(h * 0.85), clamp(Math.round(h / 14), 8, 48));
-  scatterStars(ctx, w, h, rng, colorAt(pal, 1), top, h * 0.45, 900);
+  const sbr = A ? 0.07 * osc(ap, 1, 0.6) : 0, sLight = colorAt(pal, 1);
+  drawBands(ctx, w, h, A ? mix(top, sLight, sbr) : top, A ? mix(bot, sLight, sbr) : bot, Math.floor(h * 0.85), clamp(Math.round(h / 14), 8, 48));
+  scatterStars(ctx, w, h, rng, colorAt(pal, 1), top, h * 0.45, 900, ap);
   const mr = Math.round(m * rng.range(0.05, 0.09)), mx = Math.round(w * rng.range(0.15, 0.85)), my = Math.round(h * rng.range(0.15, 0.4));
   const moon = colorAt(pal, rng.range(0.9, 1));
-  for (let k = 3; k >= 1; k--) fillEllipse(ctx, mx, my, mr * (1 + 0.45 * k), mr * (1 + 0.45 * k), mix(mix(top, bot, my / h), moon, 0.08 * (4 - k)));
+  for (let k = 3; k >= 1; k--) fillEllipse(ctx, mx, my, mr * (1 + 0.45 * k), mr * (1 + 0.45 * k), mix(mix(top, bot, my / h), moon, 0.08 * (4 - k) * (1 + (A ? 0.25 * Math.sin(ap) : 0))));
   fillEllipse(ctx, mx, my, mr, mr, moon);
   const dark = colorAt(pal, 0), winCol = colorAt(pal, rng.range(0.85, 1)), L = 3;
+  let wi = 0;
   for (let l = 0; l < L; l++) {
     const t = l / (L - 1);
     const col = mix(mix(bot, dark, 0.45), dark, t);
@@ -624,6 +656,8 @@ function skyline(ctx, w, h, rng, pal) {
         const sx = Math.max(2 * u, Math.round(bw / 5)), sy = Math.max(3 * u, Math.round(sx * 1.4)), ww = Math.max(u, Math.round(sx * 0.45));
         for (let yy = y + sy; yy < h - sy; yy += sy) for (let xx = x + sx * 0.6; xx < x + bw - ww; xx += sx) {
           if (!rng.chance(prob)) continue;
+          wi++;
+          if (A && hash01(wi * 3.7 + l) < 0.34 && Math.sin(ap * (1 + (wi % 2)) + wi) > 0.1) continue;
           ctx.fillStyle = css(wcol); ctx.fillRect(Math.round(xx), yy, ww, Math.max(u, Math.round(ww * 1.2)));
         }
       }
@@ -633,7 +667,8 @@ function skyline(ctx, w, h, rng, pal) {
 }
 
 /* 14 ─ Spiro: layered hypotrochoids with additive glow */
-function spiro(ctx, w, h, rng, pal) {
+function spiro(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), u = Math.max(1, Math.round(m / 270)), cx = w / 2, cy = h / 2, S = m * 0.5;
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.hypot(w, h) / 2);
   g.addColorStop(0, css(colorAt(pal, 0.12))); g.addColorStop(1, css(colorAt(pal, 0)));
@@ -644,7 +679,7 @@ function spiro(ctx, w, h, rng, pal) {
   const N = Math.round(loops * 180);
   ctx.lineWidth = Math.max(1, u * 0.5); ctx.lineJoin = 'round';
   for (let j = 0; j < count; j++) {
-    const t = j / count, d = r * (0.35 + 0.8 * t), phi = j * dphi, cs = Math.cos(phi), sn = Math.sin(phi);
+    const t = j / count, d = r * (0.35 + 0.8 * t + (A ? 0.08 * osc(ap, 1, t * 6) : 0)), phi = j * dphi + ap, cs = Math.cos(phi), sn = Math.sin(phi);
     ctx.strokeStyle = css(colorAt(pal, 0.45 + 0.55 * t), 0.22);
     ctx.beginPath();
     for (let i = 0; i <= N; i++) {
@@ -659,20 +694,22 @@ function spiro(ctx, w, h, rng, pal) {
 }
 
 /* 15 ─ Flow: particles tracing a noise field */
-function flow(ctx, w, h, rng, pal) {
+function flow(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), u = Math.max(1, Math.round(m / 270)), noise = makeNoise2D(rng);
   const g = ctx.createLinearGradient(0, 0, 0, h);
   g.addColorStop(0, css(colorAt(pal, 0))); g.addColorStop(1, css(colorAt(pal, 0.12)));
   ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
   const sc = rng.range(1.5, 3.5), ox = rng.range(0, 50), oy = rng.range(0, 50), turn = rng.range(2, 5);
+  const oxa = ox + (A ? 0.35 * (Math.cos(ap) - 1) : 0), oya = oy + (A ? 0.35 * Math.sin(ap) : 0);
   ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = Math.max(1, u * 0.7); ctx.lineCap = 'round';
   const n = Math.round((w * h) / (55 * u * u)), steps = rng.int(30, 70), step = u * 1.1;
   for (let i = 0; i < n; i++) {
     let x = rng.next() * w, y = rng.next() * h;
-    ctx.strokeStyle = css(colorAt(pal, 0.3 + 0.7 * noise(ox + (x / m) * sc, oy + (y / m) * sc, 3)), 0.3);
+    ctx.strokeStyle = css(colorAt(pal, 0.3 + 0.7 * noise(oxa + (x / m) * sc, oya + (y / m) * sc, 3)), 0.3);
     ctx.beginPath(); ctx.moveTo(x, y);
     for (let s = 0; s < steps; s++) {
-      const a = noise(ox + (x / m) * sc, oy + (y / m) * sc, 3) * Math.PI * turn;
+      const a = noise(oxa + (x / m) * sc, oya + (y / m) * sc, 3) * Math.PI * turn;
       x += Math.cos(a) * step; y += Math.sin(a) * step;
       ctx.lineTo(x, y);
     }
@@ -682,12 +719,13 @@ function flow(ctx, w, h, rng, pal) {
 }
 
 /* 16 ─ Plasma: interfering sine waves, smooth or posterised */
-function plasma(ctx, w, h, rng, pal) {
+function plasma(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), f = [0, 1, 2, 3].map(() => (rng.range(2, 6) * Math.PI * 2) / m);
   const ph = [0, 1, 2, 3].map(() => rng.range(0, Math.PI * 2));
   const cx = w * rng.range(0.2, 0.8), cy = h * rng.range(0.2, 0.8), q = rng.chance(0.5) ? rng.int(5, 10) : 0;
   pixelField(ctx, w, h, (x, y) => {
-    const v = Math.sin(x * f[0] + ph[0]) + Math.sin(y * f[1] + ph[1]) + Math.sin((x + y) * f[2] + ph[2]) + Math.sin(Math.hypot(x - cx, y - cy) * f[3] + ph[3]);
+    const v = Math.sin(x * f[0] + ph[0] + ap) + Math.sin(y * f[1] + ph[1] - ap) + Math.sin((x + y) * f[2] + ph[2] + 2 * ap) + Math.sin(Math.hypot(x - cx, y - cy) * f[3] + ph[3] - ap);
     let t = (v + 4) / 8;
     if (q) t = Math.floor(t * q) / (q - 1);
     return colorAt(pal, clamp(t, 0, 1));
@@ -695,7 +733,8 @@ function plasma(ctx, w, h, rng, pal) {
 }
 
 /* 17 ─ Forest: misty rows of pines receding into fog */
-function forest(ctx, w, h, rng, pal) {
+function forest(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h);
   const top = colorAt(pal, rng.range(0.55, 0.75)), bot = colorAt(pal, rng.range(0.82, 0.98));
   drawBands(ctx, w, h, top, bot, h, clamp(Math.round(h / 14), 8, 48));
@@ -709,33 +748,36 @@ function forest(ctx, w, h, rng, pal) {
   for (let l = 0; l < L; l++) {
     const t = L === 1 ? 1 : l / (L - 1), base = lerp(h * 0.42, h * 0.9, t), ts = lerp(m * 0.06, m * 0.2, t);
     const col = mix(mix(fog, dark, 0.35), dark, Math.pow(t, 0.8));
+    const sway = A ? ts * 0.07 * Math.sin(ap + l * 1.1) : 0;
     ctx.fillStyle = css(col); ctx.fillRect(0, base + ts * 0.4, w, h);
     for (let x = -ts; x < w + ts; x += ts * 0.42 * rng.range(0.6, 1.5)) {
       const sz = ts * rng.range(0.7, 1.25), y = base + rng.range(-0.25, 0.25) * ts;
       for (let k = 0; k < 3; k++) {
         const topY = y - sz * (1 - k * 0.3), half = sz * 0.2 * (1 + k * 0.55), baseY = topY + sz * 0.5;
-        poly(ctx, [[x, topY], [x + half, baseY], [x - half, baseY]], col);
+        poly(ctx, [[x + sway, topY], [x + half + sway, baseY], [x - half + sway, baseY]], col);
       }
     }
     if (l < L - 1) {
       const fg = ctx.createLinearGradient(0, base - ts * 1.2, 0, base + ts * 1.6);
-      fg.addColorStop(0, css(fog, 0)); fg.addColorStop(0.55, css(fog, 0.5)); fg.addColorStop(1, css(fog, 0));
+      fg.addColorStop(0, css(fog, 0)); fg.addColorStop(0.55, css(fog, 0.5 + (A ? 0.12 * Math.sin(ap + l) : 0))); fg.addColorStop(1, css(fog, 0));
       ctx.fillStyle = fg; ctx.fillRect(0, base - ts * 1.2, w, ts * 2.8);
     }
   }
 }
 
 /* 18 ─ Hex: honeycomb mosaic coloured by a noise field */
-function hex(ctx, w, h, rng, pal) {
+function hex(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), s = m / rng.range(6, 13), noise = makeNoise2D(rng);
   const ox = rng.range(0, 50), oy = rng.range(0, 50), sc = rng.range(1, 2.5), q = rng.int(4, 8);
+  const oxa = ox + (A ? 0.5 * (Math.cos(ap) - 1) : 0), oya = oy + (A ? 0.5 * Math.sin(ap) : 0);
   ctx.fillStyle = css(colorAt(pal, 0.02)); ctx.fillRect(0, 0, w, h);
   const dx = Math.sqrt(3) * s, dy = 1.5 * s, light = colorAt(pal, 1);
   const hexPts = (cx, cy, r) => Array.from({ length: 6 }, (_, i) => [cx + r * Math.cos(Math.PI / 6 + (i * Math.PI) / 3), cy + r * Math.sin(Math.PI / 6 + (i * Math.PI) / 3)]);
   for (let row = -1; row * dy < h + s; row++) {
     for (let col = -1; col * dx < w + dx; col++) {
       const cx = col * dx + (row & 1 ? dx / 2 : 0), cy = row * dy;
-      const v = noise(ox + (cx / m) * sc, oy + (cy / m) * sc, 3);
+      const v = noise(oxa + (cx / m) * sc, oya + (cy / m) * sc, 3);
       const tier = Math.floor(clamp((v - 0.25) / 0.5, 0, 0.999) * q) / (q - 1);
       const base = colorAt(pal, 0.1 + 0.9 * tier);
       poly(ctx, hexPts(cx, cy, s * 0.94), base);
@@ -745,10 +787,11 @@ function hex(ctx, w, h, rng, pal) {
 }
 
 /* 19 ─ Planet: shaded world, optional ring, starry sky */
-function planet(ctx, w, h, rng, pal) {
+function planet(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), noise = makeNoise2D(rng);
   drawBands(ctx, w, h, colorAt(pal, 0), colorAt(pal, 0.12), h, clamp(Math.round(h / 14), 8, 48));
-  scatterStars(ctx, w, h, rng, colorAt(pal, 1), colorAt(pal, 0.05), h, 650);
+  scatterStars(ctx, w, h, rng, colorAt(pal, 1), colorAt(pal, 0.05), h, 650, ap);
   const R = Math.round(m * rng.range(0.24, 0.38)), cx = Math.round(w * rng.range(0.3, 0.7)), cy = Math.round(h * rng.range(0.42, 0.62));
   const ring = rng.chance(0.55), tilt = rng.range(-0.5, 0.5), ringCol = colorAt(pal, rng.range(0.55, 0.9));
   const banded = rng.chance(0.5), bands = rng.range(4, 9), ox = rng.range(0, 50), la = rng.range(0, Math.PI * 2);
@@ -773,7 +816,9 @@ function planet(ctx, w, h, rng, pal) {
       if (r2 > 1) continue;
       const nz = Math.sqrt(1 - r2), lam = Math.max(0, (px * lx + py * ly + nz * lz) / ll);
       const lon = Math.atan2(px, nz), lat = Math.asin(py);
-      const tex = banded ? noise(ox + lon * 0.8, lat * bands, 4) : noise(ox + lon * 2.2, lat * 2.2, 5);
+      let tex;
+      if (A) { const sx = Math.cos(lon + ap), sy = Math.sin(lon + ap); tex = banded ? noise(ox + sx * 1.3, lat * bands + sy * 1.3, 4) : noise(ox + sx * 2.6, lat * 2.2 + sy * 2.6, 5); }
+      else tex = banded ? noise(ox + lon * 0.8, lat * bands, 4) : noise(ox + lon * 2.2, lat * 2.2, 5);
       const tcol = colorAt(pal, 0.2 + 0.75 * clamp((tex - 0.25) / 0.5, 0, 1));
       const shade = 0.08 + 0.92 * Math.pow(lam, 0.9), rim = Math.pow(1 - nz, 3) * 0.3;
       const c = mix(mix(dark, tcol, shade), atmos, rim);
@@ -801,7 +846,8 @@ function bayerMatrix(n) {
 const smooth = (t) => t * t * (3 - 2 * t);
 
 /* 20 ─ Maze: a spanning-tree maze coloured by distance from the start */
-function maze(ctx, w, h, rng, pal) {
+function maze(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), cell = Math.max(4, Math.round(m / rng.int(14, 34)));
   const cols = Math.floor(w / cell) + 1, rows = Math.floor(h / cell) + 1;
   const visited = new Uint8Array(cols * rows), dist = new Int32Array(cols * rows);
@@ -822,7 +868,7 @@ function maze(ctx, w, h, rng, pal) {
   const ox = (w - (cols - 1) * cell) / 2, oy = (h - (rows - 1) * cell) / 2;
   ctx.lineWidth = cell * 0.5; ctx.lineCap = 'round';
   for (const [a, b] of edges) {
-    ctx.strokeStyle = css(colorAt(pal, 0.3 + 0.7 * (dist[b] / maxD)));
+    ctx.strokeStyle = css(colorAt(pal, 0.3 + 0.7 * (A ? triW(dist[b] / maxD - ap / TAU) : dist[b] / maxD)));
     ctx.beginPath();
     ctx.moveTo(ox + (a % cols) * cell, oy + ((a / cols) | 0) * cell);
     ctx.lineTo(ox + (b % cols) * cell, oy + ((b / cols) | 0) * cell);
@@ -831,7 +877,8 @@ function maze(ctx, w, h, rng, pal) {
 }
 
 /* 21 ─ Circuit: 45° PCB traces, pads and chips */
-function circuit(ctx, w, h, rng, pal) {
+function circuit(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), g = Math.max(6, Math.round(m / rng.int(24, 40)));
   const bg = mix(colorAt(pal, 0.02), colorAt(pal, 0.14), 0.5);
   ctx.fillStyle = css(bg); ctx.fillRect(0, 0, w, h);
@@ -841,7 +888,8 @@ function circuit(ctx, w, h, rng, pal) {
   for (let i = 0; i < n; i++) {
     let x = rng.int(0, Math.floor(w / g)) * g, y = rng.int(0, Math.floor(h / g)) * g, d = rng.int(0, 7);
     const col = colorAt(pal, rng.range(0.4, 0.95));
-    ctx.strokeStyle = css(col); ctx.beginPath(); ctx.moveTo(x, y);
+    const colS = A ? mix(col, colorAt(pal, 1), 0.45 * Math.max(0, Math.sin(ap + i * 0.7))) : col;
+    ctx.strokeStyle = css(colS); ctx.beginPath(); ctx.moveTo(x, y);
     const segs = rng.int(2, 5);
     for (let s = 0; s < segs; s++) {
       const len = rng.int(2, 8);
@@ -850,7 +898,7 @@ function circuit(ctx, w, h, rng, pal) {
     }
     ctx.stroke();
     for (const [px, py] of [[x, y]]) {
-      ctx.fillStyle = css(col); ctx.beginPath(); ctx.arc(px, py, g * 0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = css(colS); ctx.beginPath(); ctx.arc(px, py, g * 0.3, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = css(bg); ctx.beginPath(); ctx.arc(px, py, g * 0.12, 0, Math.PI * 2); ctx.fill();
     }
   }
@@ -866,7 +914,8 @@ function circuit(ctx, w, h, rng, pal) {
 }
 
 /* 22 ─ Kaleido: n-fold mirrored shapes */
-function kaleido(ctx, w, h, rng, pal) {
+function kaleido(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), u = Math.max(1, Math.round(m / 270)), cx = w / 2, cy = h / 2, R = Math.hypot(w, h) / 2;
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
   g.addColorStop(0, css(colorAt(pal, 0.15))); g.addColorStop(1, css(colorAt(pal, 0.02)));
@@ -874,14 +923,15 @@ function kaleido(ctx, w, h, rng, pal) {
   const n = rng.pick([6, 8, 10, 12]), shapes = [];
   for (let i = 0, c = rng.int(18, 36); i < c; i++) shapes.push({
     type: rng.int(0, 2), r: rng.range(0.05, 0.95) * R * 0.8, a: rng.range(0.02, Math.PI / n - 0.02), s: rng.range(0.03, 0.16) * m,
-    col: colorAt(pal, rng.range(0.3, 1)), al: rng.range(0.5, 0.95), rot: rng.range(0, Math.PI),
+    col: colorAt(pal, rng.range(0.3, 1)), al: rng.range(0.5, 0.95), rot: rng.range(0, Math.PI), q: i,
   });
   const rim = colorAt(pal, 0.95);
   for (let k = 0; k < n; k++) for (let mir = 0; mir < 2; mir++) {
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate((k * 2 * Math.PI) / n); if (mir) ctx.scale(1, -1);
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate((k * 2 * Math.PI) / n + ap / n); if (mir) ctx.scale(1, -1);
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R * 1.6, 0, Math.PI / n); ctx.closePath(); ctx.clip();
     for (const s of shapes) {
-      ctx.save(); ctx.translate(s.r * Math.cos(s.a), s.r * Math.sin(s.a)); ctx.rotate(s.rot);
+      const rr = s.r * (1 + (A ? 0.12 * osc(ap, 1, s.q * 1.7) : 0));
+      ctx.save(); ctx.translate(rr * Math.cos(s.a), rr * Math.sin(s.a)); ctx.rotate(s.rot + (A ? ap * (s.q % 2 ? 1 : -1) : 0));
       ctx.fillStyle = css(s.col, s.al); ctx.strokeStyle = css(rim, 0.35); ctx.lineWidth = Math.max(1, u * 0.5);
       ctx.beginPath();
       if (s.type === 0) ctx.arc(0, 0, s.s * 0.5, 0, Math.PI * 2);
@@ -894,10 +944,11 @@ function kaleido(ctx, w, h, rng, pal) {
 }
 
 /* 23 ─ Islands: top-down archipelago map with hill-shading */
-function islands(ctx, w, h, rng, pal) {
+function islands(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), noise = makeNoise2D(rng), sc = rng.range(1.6, 3), ox = rng.range(0, 50), oy = rng.range(0, 50);
-  const sea = rng.range(0.46, 0.54), H = new Float32Array(w * h);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) H[y * w + x] = noise(ox + (x / m) * sc, oy + (y / m) * sc, 5);
+  const sea0 = rng.range(0.46, 0.54), sea = sea0 + (A ? 0.015 * Math.sin(ap) : 0), H = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) H[y * w + x] = noise(ox + (x / m) * sc + (A ? 0.12 * (Math.cos(ap) - 1) : 0), oy + (y / m) * sc + (A ? 0.12 * Math.sin(ap) : 0), 5);
   const deep = colorAt(pal, 0.06), shallow = colorAt(pal, 0.38), foam = colorAt(pal, 0.97), sand = colorAt(pal, 0.82);
   const land = [colorAt(pal, 0.62), colorAt(pal, 0.48), colorAt(pal, 0.34), colorAt(pal, 0.2), colorAt(pal, 1)];
   const k = Math.max(1, Math.round(m / 400));
@@ -915,16 +966,18 @@ function islands(ctx, w, h, rng, pal) {
 }
 
 /* 24 ─ Ridgelines: stacked noisy line plots over a bell envelope */
-function ridgelines(ctx, w, h, rng, pal) {
+function ridgelines(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), u = Math.max(1, Math.round(m / 270)), noise = makeNoise2D(rng);
   const bg = colorAt(pal, 0.02); ctx.fillStyle = css(bg); ctx.fillRect(0, 0, w, h);
   const L = rng.int(22, 44), mx = w * 0.12, cx = w / 2, amp = h * rng.range(0.14, 0.22), spread = w * rng.range(0.14, 0.24), fx = rng.range(8, 16), oy = rng.range(0, 40);
   const step = Math.max(1, (w - 2 * mx) / 160);
+  const dxA = A ? 0.6 * (Math.cos(ap) - 1) : 0, dyA = A ? 0.6 * Math.sin(ap) : 0;
   for (let l = 0; l < L; l++) {
     const y0 = lerp(h * 0.14, h * 0.92, l / (L - 1)), pts = [];
     for (let x = mx; x <= w - mx; x += step) {
       const env = Math.exp(-Math.pow((x - cx) / spread, 2));
-      pts.push([x, y0 - amp * env * (noise((x / w) * fx, oy + l * 0.09, 3) * 2 - 0.2) * 1.3]);
+      pts.push([x, y0 - amp * (1 + (A ? 0.15 * Math.sin(ap + l * 0.2) : 0)) * env * (noise((x / w) * fx + dxA, oy + l * 0.09 + dyA, 3) * 2 - 0.2) * 1.3]);
     }
     ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
     for (const p of pts) ctx.lineTo(p[0], p[1]);
@@ -936,21 +989,24 @@ function ridgelines(ctx, w, h, rng, pal) {
 }
 
 /* 25 ─ Bokeh: soft out-of-focus light discs */
-function bokeh(ctx, w, h, rng, pal) {
+function bokeh(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), g = ctx.createLinearGradient(0, 0, w, h);
   g.addColorStop(0, css(colorAt(pal, 0.02))); g.addColorStop(1, css(colorAt(pal, 0.3)));
   ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
   ctx.globalCompositeOperation = 'screen';
   for (let i = 0, n = rng.int(30, 70); i < n; i++) {
-    const r = m * (0.02 + 0.14 * Math.pow(rng.next(), 2)), x = rng.next() * w, y = rng.next() * h, a = rng.range(0.08, 0.3), col = colorAt(pal, rng.range(0.4, 1));
-    ctx.fillStyle = css(col, a); ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    const r = m * (0.02 + 0.14 * Math.pow(rng.next(), 2)), x = rng.next() * w, y = rng.next() * h, a0 = rng.range(0.08, 0.3), col = colorAt(pal, rng.range(0.4, 1));
+    const bx = x + (A ? m * 0.03 * osc(ap, 1, i * 1.9) : 0), by = y + (A ? m * 0.04 * osc(ap, 1, i * 2.3 + 1) : 0), a = a0 * (1 + (A ? 0.4 * osc(ap, 2, i * 1.1) : 0));
+    ctx.fillStyle = css(col, a); ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = css(col, Math.min(1, a * 1.8)); ctx.lineWidth = Math.max(1, r * 0.06); ctx.stroke();
   }
   ctx.globalCompositeOperation = 'source-over';
 }
 
 /* 26 ─ Glitch: broken slices, RGB-split and scanlines */
-function glitch(ctx, w, h, rng, pal) {
+function glitch(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), u = Math.max(1, Math.round(m / 270));
   drawBands(ctx, w, h, colorAt(pal, 0.02), colorAt(pal, 0.4), h, clamp(Math.round(h / 12), 8, 56));
   const sun = colorAt(pal, rng.range(0.85, 1)), r = Math.round(m * rng.range(0.18, 0.3));
@@ -960,8 +1016,9 @@ function glitch(ctx, w, h, rng, pal) {
     ctx.fillRect(rng.next() * w, rng.next() * h, w * rng.range(0.1, 0.45), h * rng.range(0.02, 0.1));
   }
   const img = ctx.getImageData(0, 0, w, h), src = new Uint8ClampedArray(img.data), d = img.data;
-  for (let i = 0, n = rng.int(14, 34); i < n; i++) {
-    const y0 = rng.int(0, h - 1), sh = rng.int(1, Math.max(2, Math.round(h * 0.06))), shift = Math.round(rng.range(-0.12, 0.12) * w), split = rng.int(1, Math.max(2, Math.round(w * 0.012)));
+  const gr = A ? makeRng('glitch|' + rng.int(0, 1000000000) + '|' + (((Math.floor(time * 12) % 12) + 12) % 12)) : rng;
+  for (let i = 0, n = gr.int(14, 34); i < n; i++) {
+    const y0 = gr.int(0, h - 1), sh = gr.int(1, Math.max(2, Math.round(h * 0.06))), shift = Math.round(gr.range(-0.12, 0.12) * w), split = gr.int(1, Math.max(2, Math.round(w * 0.012)));
     for (let y = y0; y < Math.min(h, y0 + sh); y++) for (let x = 0; x < w; x++) {
       const o = (y * w + x) * 4, sr = (y * w + ((x - shift - split + 2 * w) % w)) * 4, sg = (y * w + ((x - shift + 2 * w) % w)) * 4, sb = (y * w + ((x - shift + split + 2 * w) % w)) * 4;
       d[o] = src[sr]; d[o + 1] = src[sg + 1]; d[o + 2] = src[sb + 2];
@@ -973,14 +1030,15 @@ function glitch(ctx, w, h, rng, pal) {
 }
 
 /* 27 ─ Memphis: 80s confetti of squiggles, triangles and dots */
-function memphis(ctx, w, h, rng, pal) {
+function memphis(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), u = Math.max(1, Math.round(m / 270)), bgT = rng.range(0.55, 0.9);
   ctx.fillStyle = css(colorAt(pal, bgT)); ctx.fillRect(0, 0, w, h);
   const pick = () => { let t = rng.range(0, 1); if (Math.abs(t - bgT) < 0.18) t = (t + 0.4) % 1; return colorAt(pal, t); };
   ctx.lineWidth = Math.max(2, m * 0.018); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   for (let i = 0, n = rng.int(70, 120); i < n; i++) {
     const x = rng.next() * w, y = rng.next() * h, s = m * rng.range(0.07, 0.17), col = pick(), t = rng.int(0, 6), filled = rng.chance(0.5);
-    ctx.save(); ctx.translate(x, y); ctx.rotate(rng.range(0, Math.PI * 2)); ctx.fillStyle = css(col); ctx.strokeStyle = css(col);
+    ctx.save(); ctx.translate(x + (A ? m * 0.02 * osc(ap, 1, i * 1.3) : 0), y + (A ? m * 0.02 * osc(ap, 1, i * 1.3 + 2) : 0)); ctx.rotate(rng.range(0, Math.PI * 2) + (A ? ap * (i % 2 ? 1 : -1) : 0)); ctx.fillStyle = css(col); ctx.strokeStyle = css(col);
     ctx.beginPath();
     if (t === 0) ctx.arc(0, 0, s * 0.5, 0, Math.PI * 2);
     else if (t === 1) { ctx.moveTo(0, -s * 0.6); ctx.lineTo(s * 0.55, s * 0.4); ctx.lineTo(-s * 0.55, s * 0.4); ctx.closePath(); }
@@ -995,16 +1053,17 @@ function memphis(ctx, w, h, rng, pal) {
 }
 
 /* 28 ─ Synthwave: striped sun over a perspective grid */
-function synthwave(ctx, w, h, rng, pal) {
+function synthwave(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), u = Math.max(1, Math.round(m / 270)), horizon = Math.floor(h * rng.range(0.52, 0.62)), cx = w * rng.range(0.4, 0.6);
   const top = colorAt(pal, 0.02), bot = colorAt(pal, rng.range(0.4, 0.6));
   drawBands(ctx, w, h, top, bot, horizon, clamp(Math.round(h / 14), 8, 48));
-  scatterStars(ctx, w, h, rng, colorAt(pal, 1), top, horizon * 0.7, 800);
+  scatterStars(ctx, w, h, rng, colorAt(pal, 1), top, horizon * 0.7, 800, ap);
   const r = Math.round(m * rng.range(0.2, 0.3)), cy = horizon - Math.round(r * 0.35), c1 = colorAt(pal, 0.98), c2 = colorAt(pal, rng.range(0.55, 0.75));
   for (let k = 3; k >= 1; k--) fillEllipse(ctx, cx, cy, r * (1 + 0.18 * k), r * (1 + 0.18 * k), mix(bot, c2, 0.12 * (4 - k)));
   for (let dy = -r; dy <= r; dy++) {
     const yy = cy + dy; if (yy >= horizon) break;
-    if (dy > -r * 0.1 && Math.floor((dy + r * 0.1) / Math.max(u, r * 0.1)) % 2 === 1) continue;
+    if (dy > -r * 0.1 && Math.floor((dy + r * 0.1 + (A ? (ap / TAU) * 2 * Math.max(u, r * 0.1) : 0)) / Math.max(u, r * 0.1)) % 2 === 1) continue;
     const dx = Math.floor(Math.sqrt(Math.max(0, r * r - dy * dy)));
     ctx.fillStyle = css(mix(c1, c2, (dy + r) / (2 * r))); ctx.fillRect(Math.round(cx) - dx, yy, dx * 2 + 1, 1);
   }
@@ -1017,14 +1076,15 @@ function synthwave(ctx, w, h, rng, pal) {
   const line = colorAt(pal, rng.range(0.8, 0.98)), K = 14, lw = Math.max(1, u * 0.8);
   for (const [wd, al] of [[lw * 3, 0.18], [lw, 0.95]]) {
     ctx.lineWidth = wd; ctx.strokeStyle = css(line, al); ctx.beginPath();
-    for (let k = 0; k <= K; k++) { const y = horizon + (h - horizon) * Math.pow(k / K, 2.2); ctx.moveTo(0, y); ctx.lineTo(w, y); }
+    for (let k = -1; k <= K; k++) { const z = (k + (A ? ap / TAU : 0)) / K; if (z < 0 || z > 1) continue; const y = horizon + (h - horizon) * Math.pow(z, 2.2); ctx.moveTo(0, y); ctx.lineTo(w, y); }
     for (let i = -14; i <= 14; i++) { ctx.moveTo(cx, horizon); ctx.lineTo(cx + i * (w / 7), h); }
     ctx.stroke();
   }
 }
 
 /* 29 ─ Tartan: woven plaid from overlapping translucent stripes */
-function tartan(ctx, w, h, rng, pal) {
+function tartan(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), u = Math.max(1, Math.round(m / 270));
   ctx.fillStyle = css(colorAt(pal, rng.range(0.1, 0.3))); ctx.fillRect(0, 0, w, h);
   const stripes = [];
@@ -1033,7 +1093,7 @@ function tartan(ctx, w, h, rng, pal) {
   ctx.globalAlpha = 0.55;
   for (const horizontal of [true, false]) {
     for (let p = -period; p < (horizontal ? h : w) + period; p += period) {
-      let q = p;
+      let q = p + (A ? (horizontal ? 1 : -1) * (ap / TAU) * period : 0);
       for (const s of stripes) {
         q += s.gap; ctx.fillStyle = css(s.col);
         horizontal ? ctx.fillRect(0, q, w, s.wd) : ctx.fillRect(q, 0, s.wd, h);
@@ -1048,12 +1108,13 @@ function tartan(ctx, w, h, rng, pal) {
 }
 
 /* 30 ─ Network: glowing nodes linked by nearby edges */
-function network(ctx, w, h, rng, pal) {
+function network(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.hypot(w, h) / 2);
   g.addColorStop(0, css(colorAt(pal, 0.14))); g.addColorStop(1, css(colorAt(pal, 0)));
   ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
   const n = rng.int(50, 100), pts = [], maxD = m * rng.range(0.16, 0.26);
-  for (let i = 0; i < n; i++) pts.push({ x: rng.next() * w, y: rng.next() * h, t: rng.range(0.4, 1), deg: 0 });
+  for (let i = 0; i < n; i++) pts.push({ x: rng.next() * w + (A ? m * 0.035 * osc(ap, 1, i * 2.1) : 0), y: rng.next() * h + (A ? m * 0.035 * osc(ap, 1, i * 2.1 + 1.7) : 0), t: rng.range(0.4, 1), deg: 0 });
   ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = Math.max(1, m / 270 * 0.8);
   for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
     const d = Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y);
@@ -1063,7 +1124,7 @@ function network(ctx, w, h, rng, pal) {
     ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.stroke();
   }
   for (const p of pts) {
-    const r = m * (0.006 + 0.004 * Math.min(p.deg, 8)), col = colorAt(pal, p.t), gl = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 4);
+    const r = m * (0.006 + 0.004 * Math.min(p.deg, 8)) * (1 + (A ? 0.25 * osc(ap, 1, p.t * 9) : 0)), col = colorAt(pal, p.t), gl = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 4);
     gl.addColorStop(0, css(col, 0.9)); gl.addColorStop(0.3, css(col, 0.25)); gl.addColorStop(1, css(col, 0));
     ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(p.x, p.y, r * 4, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = css(colorAt(pal, 1)); ctx.beginPath(); ctx.arc(p.x, p.y, r * 0.8, 0, Math.PI * 2); ctx.fill();
@@ -1072,26 +1133,29 @@ function network(ctx, w, h, rng, pal) {
 }
 
 /* 31 ─ Mesh: smooth gradient mesh, the modern desktop-wallpaper look */
-function mesh(ctx, w, h, rng, pal) {
+function mesh(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const gx = rng.int(3, 5), gy = rng.int(3, 5), noise = makeNoise2D(rng), ox = rng.range(0, 50), oy = rng.range(0, 50);
   const grid = Array.from({ length: gy }, () => Array.from({ length: gx }, () => colorAt(pal, rng.range(0.1, 1))));
   const m = Math.min(w, h);
+  const mdx = A ? 0.6 * (Math.cos(ap) - 1) : 0, mdy = A ? 0.6 * Math.sin(ap) : 0;
   pixelField(ctx, w, h, (x, y) => {
-    const u = clamp(x / w + 0.12 * (noise(ox + (x / m) * 2, oy + (y / m) * 2, 3) - 0.5), 0, 0.9999);
-    const v = clamp(y / h + 0.12 * (noise(oy + (x / m) * 2, ox + (y / m) * 2, 3) - 0.5), 0, 0.9999);
+    const u = clamp(x / w + 0.12 * (noise(ox + (x / m) * 2 + mdx, oy + (y / m) * 2 + mdy, 3) - 0.5), 0, 0.9999);
+    const v = clamp(y / h + 0.12 * (noise(oy + (x / m) * 2 - mdy, ox + (y / m) * 2 + mdx, 3) - 0.5), 0, 0.9999);
     const fx = u * (gx - 1), fy = v * (gy - 1), ix = Math.floor(fx), iy = Math.floor(fy), tx = smooth(fx - ix), ty = smooth(fy - iy);
     return mix(mix(grid[iy][ix], grid[iy][ix + 1], tx), mix(grid[iy + 1][ix], grid[iy + 1][ix + 1], tx), ty);
   });
 }
 
 /* 32 ─ Moire: overlapping ring systems that interfere */
-function moire(ctx, w, h, rng, pal) {
+function moire(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), R = Math.hypot(w, h), d = Math.max(2, m / rng.range(60, 110));
   ctx.fillStyle = css(colorAt(pal, 0.02)); ctx.fillRect(0, 0, w, h);
   ctx.globalCompositeOperation = 'screen'; ctx.lineWidth = d * 0.46;
   const sets = rng.int(2, 3), baseX = w * rng.range(0.3, 0.7), baseY = h * rng.range(0.3, 0.7);
   for (let s = 0; s < sets; s++) {
-    const a = rng.range(0, Math.PI * 2), dist = m * rng.range(0.08, 0.35), cx = baseX + Math.cos(a) * dist * s, cy = baseY + Math.sin(a) * dist * s;
+    const a = rng.range(0, Math.PI * 2), dist = m * rng.range(0.08, 0.35), cx = baseX + Math.cos(a) * dist * s + (A ? m * 0.011 * osc(ap, 1, s * 2) : 0), cy = baseY + Math.sin(a) * dist * s + (A ? m * 0.011 * osc(ap, 1, s * 2 + 1.5) : 0);
     ctx.strokeStyle = css(colorAt(pal, 0.5 + 0.45 * (s / Math.max(1, sets - 1))), 0.9); ctx.beginPath();
     for (let r = d; r < R; r += d) { ctx.moveTo(cx + r, cy); ctx.arc(cx, cy, r, 0, Math.PI * 2); }
     ctx.stroke();
@@ -1100,13 +1164,15 @@ function moire(ctx, w, h, rng, pal) {
 }
 
 /* 33 ─ Metaballs: merging blobs, contoured into colour bands */
-function metaballs(ctx, w, h, rng, pal) {
+function metaballs(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), balls = [];
   for (let i = 0, n = rng.int(8, 15); i < n; i++) balls.push({ x: rng.range(0.05, 0.95) * w, y: rng.range(0.05, 0.95) * h, r2: Math.pow(m * rng.range(0.07, 0.2), 2) });
   const q = rng.int(3, 7), bg1 = colorAt(pal, 0.02), bg2 = colorAt(pal, 0.12), glow = colorAt(pal, 0.45);
+  const live = balls.map((b, i) => ({ x: b.x + (A ? m * 0.08 * osc(ap, 1 + (i % 2), i * 2.4) : 0), y: b.y + (A ? m * 0.08 * osc(ap, 1 + ((i + 1) % 2), i * 2.4 + 1) : 0), r2: b.r2 }));
   pixelField(ctx, w, h, (x, y) => {
     let s = 0;
-    for (const b of balls) { const dx = x - b.x, dy = y - b.y; s += b.r2 / (dx * dx + dy * dy + 1); }
+    for (const b of live) { const dx = x - b.x, dy = y - b.y; s += b.r2 / (dx * dx + dy * dy + 1); }
     if (s < 1) return mix(mix(bg1, bg2, y / h), glow, clamp((s - 0.55) * 1.4, 0, 0.6));
     const t = Math.floor(clamp((s - 1) / 3, 0, 0.999) * q) / (q - 1 || 1);
     return colorAt(pal, 0.3 + 0.7 * t);
@@ -1114,7 +1180,8 @@ function metaballs(ctx, w, h, rng, pal) {
 }
 
 /* 34 ─ Life: Conway's Game of Life with age colouring and fading trails */
-function life(ctx, w, h, rng, pal) {
+function life(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const cs = rng.pick([2, 3, 4]), cols = Math.ceil(w / cs), rows = Math.ceil(h / cs), N = cols * rows;
   let cur = new Uint8Array(N), nxt = new Uint8Array(N);
   const age = new Uint16Array(N), trail = new Float32Array(N), dens = rng.range(0.22, 0.36);
@@ -1133,22 +1200,24 @@ function life(ctx, w, h, rng, pal) {
   const bgTop = colorAt(pal, 0.02), bgBot = colorAt(pal, 0.12), tr = colorAt(pal, 0.3);
   pixelField(ctx, w, h, (x, y) => {
     const i = Math.min(rows - 1, (y / cs) | 0) * cols + Math.min(cols - 1, (x / cs) | 0), bg = mix(bgTop, bgBot, y / h);
-    if (cur[i]) return colorAt(pal, 0.4 + 0.6 * Math.min(age[i] / 25, 1));
-    return mix(bg, tr, trail[i] * 0.55);
+    if (cur[i]) return colorAt(pal, 0.4 + 0.6 * Math.min(age[i] / 25, 1) + (A ? 0.07 * Math.sin(ap + (x + y) * 0.05) : 0));
+    return mix(bg, tr, trail[i] * 0.55 * (A ? 0.8 + 0.3 * Math.sin(ap + y * 0.04) : 1));
   });
 }
 
 /* 35 ─ Dither: ordered Bayer dithering of a smooth field into a few palette colours */
-function dither(ctx, w, h, rng, pal) {
+function dither(ctx, w, h, rng, pal, time) {
+  const A = time !== undefined, ap = A ? time * TAU : 0;
   const m = Math.min(w, h), noise = makeNoise2D(rng), K = rng.int(2, 4), cols = Array.from({ length: K }, (_, i) => colorAt(pal, 0.05 + 0.9 * (i / (K - 1))));
   const B = bayerMatrix(8), mode = rng.int(0, 3), sc = rng.range(1, 2.4), ox = rng.range(0, 50), oy = rng.range(0, 50);
   const cx = w * rng.range(0.3, 0.7), cy = h * rng.range(0.3, 0.7), ang = rng.range(0, Math.PI * 2), fr = rng.range(2, 5);
+  const cxa = cx + (A ? m * 0.12 * Math.sin(ap) : 0), cya = cy + (A ? m * 0.12 * (Math.cos(ap) - 1) : 0), oxa = ox + (A ? 0.4 * (Math.cos(ap) - 1) : 0), oya = oy + (A ? 0.4 * Math.sin(ap) : 0);
   pixelField(ctx, w, h, (x, y) => {
     let v;
-    if (mode === 0) v = 1 - Math.hypot(x - cx, y - cy) / (m * 0.8);
-    else if (mode === 1) v = ((x - w / 2) * Math.cos(ang) + (y - h / 2) * Math.sin(ang)) / (Math.abs(w * Math.cos(ang)) + Math.abs(h * Math.sin(ang))) + 0.5;
-    else if (mode === 2) v = noise(ox + (x / m) * sc, oy + (y / m) * sc, 4) * 1.6 - 0.3;
-    else v = 0.5 + 0.5 * Math.sin(Math.hypot(x - cx, y - cy) / m * fr * Math.PI * 2 - 1) * (1 - Math.hypot(x - cx, y - cy) / (m * 1.2));
+    if (mode === 0) v = 1 - Math.hypot(x - cxa, y - cya) / (m * 0.8);
+    else if (mode === 1) v = ((x - w / 2) * Math.cos(ang) + (y - h / 2) * Math.sin(ang)) / (Math.abs(w * Math.cos(ang)) + Math.abs(h * Math.sin(ang))) + 0.5 + (A ? 0.14 * osc(ap, 1, (((x - w / 2) * Math.cos(ang) + (y - h / 2) * Math.sin(ang)) / m) * 5) : 0);
+    else if (mode === 2) v = noise(oxa + (x / m) * sc, oya + (y / m) * sc, 4) * 1.6 - 0.3;
+    else v = 0.5 + 0.5 * Math.sin(Math.hypot(x - cxa, y - cya) / m * fr * Math.PI * 2 - 1 - ap) * (1 - Math.hypot(x - cxa, y - cya) / (m * 1.2));
     const s = clamp(v, 0, 1) * (K - 1), lo = Math.min(K - 2, Math.floor(s)), f = s - lo;
     return cols[f > (B[y & 7][x & 7] + 0.5) / 64 ? lo + 1 : lo];
   });
@@ -1278,38 +1347,41 @@ const gridPx = (st, W, H) => (st.px <= 1 ? 1 : Math.max(1, Math.round((st.px * M
  * Draw the low-resolution "design grid" for a state.
  * createCanvas(w, h) must return a canvas supporting getContext('2d').
  */
-function generate(st, createCanvas) {
+function generate(st, createCanvas, time) {
+  const anim = time !== undefined && time !== null, tt = anim ? time - Math.floor(time) : undefined;
   const { W, H } = getRes(st);
   const px = gridPx(st, W, H);
   const lw = Math.ceil(W / px), lh = Math.ceil(H / px);
   const cv = createCanvas(lw, lh);
   const ctx = cv.getContext('2d');
   const rng = makeRng(`${st.seed}|${st.style}|v${VERSION}`);
-  STYLES[st.style].draw(ctx, lw, lh, rng, getPalette(st));
+  STYLES[st.style].draw(ctx, lw, lh, rng, getPalette(st), tt);
+  const grainKey = anim ? `${st.seed}|grain|v${VERSION}|f${Math.floor(tt * GRAIN_FRAMES)}` : `${st.seed}|grain|v${VERSION}`;
   const blur = st.blur || 0;
   // With blur on, vignette and grain are applied *after* blurring (in present) so they stay crisp.
   if (!blur) {
     if (st.vig) applyVignette(ctx, lw, lh);
-    if (st.grain) applyGrain(ctx, lw, lh, makeRng(`${st.seed}|grain|v${VERSION}`));
+    if (st.grain) applyGrain(ctx, lw, lh, makeRng(grainKey));
   }
-  return { cv, W, H, px, lw, lh, blur, vig: st.vig, grain: st.grain, seed: st.seed };
+  return { cv, W, H, px, lw, lh, blur, vig: st.vig, grain: st.grain, seed: st.seed, grainKey };
 }
 /** Scale a generated grid up (nearest-neighbour) into a target canvas of W×H. */
 function present(gen, target) {
-  target.width = gen.W; target.height = gen.H;
+  if (target.width !== gen.W) target.width = gen.W;
+  if (target.height !== gen.H) target.height = gen.H;
   const ctx = target.getContext('2d');
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(gen.cv, 0, 0, gen.lw * gen.px, gen.lh * gen.px);
   if (gen.blur) {
     gaussianBlur(ctx, gen.W, gen.H, gen.blur * (Math.min(gen.W, gen.H) / 1080));
     if (gen.vig) applyVignette(ctx, gen.W, gen.H);
-    if (gen.grain) applyGrain(ctx, gen.W, gen.H, makeRng(`${gen.seed}|grain|v${VERSION}`));
+    if (gen.grain) applyGrain(ctx, gen.W, gen.H, makeRng(gen.grainKey));
   }
   return target;
 }
 /** Convenience for Node: returns a finished W×H canvas. */
-function render(st, createCanvas) {
-  const gen = generate(st, createCanvas);
+function render(st, createCanvas, time) {
+  const gen = generate(st, createCanvas, time);
   return present(gen, createCanvas(gen.W, gen.H));
 }
 
@@ -1353,7 +1425,7 @@ function normalize(input, limits) {
 }
 
 return {
-  VERSION, STYLES, PALETTES, RES, DEFAULTS,
+  VERSION, STYLES, PALETTES, RES, DEFAULTS, GRAIN_FRAMES,
   makeRng, getPalette, getRes, gridPx, generate, present, render, normalize, randomSeed,
   helpers: { css, mix, hexToRgb, clamp },
 };

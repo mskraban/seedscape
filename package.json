@@ -4,13 +4,25 @@
   "description": "Deterministic generative wallpapers: a zero-install web app and a tiny image API. Same seed, same art.",
   "license": "MIT",
   "private": false,
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "node --test",
     "dev": "node scripts/dev-server.js"
   },
-  "keywords": ["wallpaper", "generative-art", "procedural", "pixel-art", "canvas", "api", "vercel", "seed"],
+  "keywords": [
+    "wallpaper",
+    "generative-art",
+    "procedural",
+    "pixel-art",
+    "canvas",
+    "api",
+    "vercel",
+    "seed"
+  ],
   "dependencies": {
-    "@napi-rs/canvas": "^0.1.0"
+    "@napi-rs/canvas": "^0.1.0",
+    "sharp": "^0.35.5"
   }
 }
